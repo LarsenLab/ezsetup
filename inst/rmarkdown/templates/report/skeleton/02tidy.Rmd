@@ -1,0 +1,54 @@
+---
+title: "Add report title here"
+author: "Add author name here"
+date: "`r Sys.Date()`"
+params:
+  endpoint:
+    value:defaultval
+    choices:
+      - defaultval
+      - op1
+      - op3
+output: 
+  html_document:
+        toc: true
+        toc_float: true
+        fig_caption: yes
+        number_sections: true
+        code_folding: hide
+  pdf_document: default
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+<!-- commenting area -->
+
+# Overview - overview of your study
++ item 1
++ item 2
+
+# Load library
+```{r load liobraries}
+library(tidyverse)
+```
+
+# Data visulation
+```{r data viz}
+```
+
+# Analysis
+```{r molding}
+```
+# Figures
+```{r, fig.show='hold',fig.cap = "Your figure caption"}
+```
+
+# Discussion
+## number 1
+### 
+### 
+## number 2
