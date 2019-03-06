@@ -13,3 +13,7 @@ install_github("e-noverre/ezsetup")
 3. update : * reinstall the single one instead of update all *
 update.packages() is the standard way to update ALL of packages. 
 The simpliest way to update this package is reinstall it.
+
+4. test run : 
+library(ezsetup)
+setRproj("/Documents/NameYourFolder")
