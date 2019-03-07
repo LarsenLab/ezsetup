@@ -15,5 +15,6 @@ Suggests:
     rmarkdown
 VignetteBuilder: knitr
 Imports:
-  devtools
+  devtools,
+  purrr
 

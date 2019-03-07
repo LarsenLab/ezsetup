@@ -3,3 +3,4 @@
 export(hello)
 export(setRproj)
 import(devtools)
+import(purrr)
