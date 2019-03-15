@@ -1,8 +1,8 @@
 Package: ezsetup
 Type: Package
 Title: R project setup tool
-Version: 1.0.0
-Authors@R: c(person("Joan","Zhang",email="joan.zhang@emory.edu", role = c("aut","cre")))
+Version: 0.1.0
+Authors@R: c(person("Christian P","Larsen",email="cpl@emory.edu", role = c("aut","cre")))
 Maintainer: Joan Zhang <joan.zhang@emory.edu>
 Description: setup folder structures for R project.
 Depends: R (>= 3.5.0)
