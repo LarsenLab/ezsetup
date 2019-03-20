@@ -17,7 +17,7 @@ output:
     theme: flatly
 ---
 
-```{r setup_chunk, include = FALSE}
+```{r setup chunk, include = FALSE}
 knitr::opts_chunk$set(
   echo = FALSE,
   collapse = TRUE,
@@ -25,7 +25,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r, include = FALSE }
+```{r setup libraries, include = FALSE}
 library(DiagrammeR)
 ```
 # Overview
@@ -43,7 +43,7 @@ report
 
 # Work Flow
 
-```{r flow diagram}
+```{r flow diag}
 mermaid("
 graph TB
 classDef Rmd fill:#D2D2D2,stroke:#333,stroke-width:1px;
@@ -55,9 +55,10 @@ class A,B,C,D,E,F,G,H,J,K,L Rmd;
 ")
 ```
 
-# Project Directory Structure (html files excluded)
-```{bash}
+# Project Directory Structure
+```{r tree}
 # please install Homebrew ( https://brew.sh ) and the tree command line tool ( ~/$ brew install tree) before running code below
+# html files are excluded from the tree
 
 # tree -I '*.html'
 ```
