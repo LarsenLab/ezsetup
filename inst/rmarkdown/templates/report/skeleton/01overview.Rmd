@@ -1,54 +1,63 @@
 ---
-title: "Add report title here"
-author: "Add author name here"
-date: "`r Sys.Date()`"
-params:
-  endpoint:
-    value:defaultval
-    choices:
-      - defaultval
-      - op1
-      - op3
-output: 
+title: "Title of the project"
+author: "Author name(s) "
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
   html_document:
-        toc: true
-        toc_float: true
-        fig_caption: yes
-        number_sections: true
-        code_folding: hide
-  pdf_document: default
+    toc: true 
+    toc_float: true
+    toc_depth: 3  
+    number_sections: false  
+    theme: flatly  
+  html_notebook:
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    number_sections: false
+    theme: flatly
 ---
 
-```{r setup, include = FALSE}
+```{r setup_chunk, include = FALSE}
 knitr::opts_chunk$set(
+  echo = FALSE,
   collapse = TRUE,
   comment = "#>"
 )
 ```
-<!-- commenting area -->
 
-# Overview - overview of your study
-+ item 1
-+ item 2
+```{r, include = FALSE }
+library(DiagrammeR)
+```
+# Overview
 
-# Load library
-```{r load liobraries}
-library(tidyverse)
+# Project Aims
+
+# Project Files
+## Rmd files
+overview  
+data_prep  
+data_explore    
+report 
+
+## R files
+
+# Work Flow
+
+```{r flow diagram}
+mermaid("
+graph TB
+classDef Rmd fill:#D2D2D2,stroke:#333,stroke-width:1px;
+A(overview) --> B1(import);
+B1 --> B2(prep);
+B2 --> C(explore <br> describe)
+C --> D(export)
+class A,B,C,D,E,F,G,H,J,K,L Rmd;
+")
 ```
 
-# Data visulation
-```{r data viz}
-```
+# Project Directory Structure (html files excluded)
+```{bash}
+# please install Homebrew ( https://brew.sh ) and the tree command line tool ( ~/$ brew install tree) before running code below
 
-# Analysis
-```{r molding}
+# tree -I '*.html'
 ```
-# Figures
-```{r, fig.show='hold',fig.cap = "Your figure caption"}
-```
-
-# Discussion
-## number 1
-### 
-### 
-## number 2
