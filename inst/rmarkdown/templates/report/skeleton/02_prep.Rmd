@@ -1,0 +1,89 @@
+---
+title: "Data Preparation"
+author: "Author name(s) "
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  html_document:
+    toc: true 
+    toc_float: true
+    toc_depth: 3  
+    number_sections: false  
+    theme: flatly  
+  html_notebook:
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    number_sections: false
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+# setup chunk options
+knitr::opts_chunk$set(
+  echo = FALSE,
+  collapse = TRUE,
+  comment = "#>", 
+  tidy = TRUE
+)
+
+# load packages
+# packages for data import
+library(REDCapR)
+library(ncdfFlow)
+
+# packages for data manipulation
+library(tidyverse)
+library(dplyr)
+library(purrr)
+library(lubridate)
+library(janitor)
+library(skimr)
+library(data.table)
+
+# packages for data export
+library(writexl)
+```
+
+## Import data
+### - csv or excel data
+<font color="grey"><i> 
+read.csv("file/data_grouping/metadata_grouping.csv") 
+</i></font>
+
+### - REDcap data
+<font color="grey"><i>
+redcap_read(redcap_uri = api.uri, token = api.token, raw_or_label = 'label',verbose = FALSE) 
+</i></font>
+
+### - flow cytometry data
+<font color="grey"><i>
+read.ncdfFlowSet(fcsFiles) 
+</i></font>
+
+### - other types of data
+
+## Summarize the raw data
+<font color="grey"><i> 
+dplyr::glimpse(raw_df)  
+ggplot(data = raw_df, aes(x = x_var, y = y_var, color = col_var)) + geom_boxplot() 
+</i></font>
+
+## Clean data
+
+## Summarize transformed data
+<font color="grey"><i> 
+dplyr::glimpse(clean_df)  
+ggplot(data = clean_df, aes(x = x_var, y = y_var, color = col_var)) + geom_boxplot() 
+</i></font>
+
+## Export data
+### - export to csv or excel 
+<font color="grey"><i> 
+write.csv(clean_df, "clean_df.csv")  
+write_xlsx(list(worksheet_name = clean_df), "clean_df.xlsx") 
+</i></font>
+
+ 
+
+
+
