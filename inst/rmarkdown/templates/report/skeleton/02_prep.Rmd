@@ -47,7 +47,12 @@ library(writexl)
 ## Import data
 ### - csv or excel data
 <font color="grey"><i> 
-read.csv("file/data_grouping/metadata_grouping.csv") 
+read.csv("yourcsvfile.csv") 
+</i></font>
+
+### - RDS
+<font color="grey"><i>
+read_rds("yourrdsfile.rds")
 </i></font>
 
 ### - REDcap data
@@ -57,30 +62,41 @@ redcap_read(redcap_uri = api.uri, token = api.token, raw_or_label = 'label',verb
 
 ### - flow cytometry data
 <font color="grey"><i>
-read.ncdfFlowSet(fcsFiles) 
+read.ncdfFlowSet(yourfcsfiles) 
 </i></font>
 
 ### - other types of data
 
-## Summarize the raw data
-<font color="grey"><i> 
-dplyr::glimpse(raw_df)  
-ggplot(data = raw_df, aes(x = x_var, y = y_var, color = col_var)) + geom_boxplot() 
+## Check the raw data
+<font color="grey"><i>
+dplyr::glimpse(raw_data)  
+ggplot(data = raw_data, aes(x = x_var, y = y_var , color = col_var)) + geom_boxplot()  
 </i></font>
+
+```{r}
+dplyr::glimpse(iris)  
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width , color = Species)) + geom_boxplot() 
+```
 
 ## Clean data
 
-## Summarize transformed data
-<font color="grey"><i> 
-dplyr::glimpse(clean_df)  
-ggplot(data = clean_df, aes(x = x_var, y = y_var, color = col_var)) + geom_boxplot() 
+## Check transformed data
+<font color="grey"><i>
+dplyr::glimpse(clean_data)  
+ggplot(data = clean_data, aes(x = x_var, y = y_var , color = col_var)) + geom_boxplot()  
 </i></font>
 
+```{r} 
+dplyr::glimpse(iris)  
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width , color = Species)) + geom_boxplot() 
+```
+
 ## Export data
-### - export to csv or excel 
+### - export to csv/excel/RDS 
 <font color="grey"><i> 
-write.csv(clean_df, "clean_df.csv")  
-write_xlsx(list(worksheet_name = clean_df), "clean_df.xlsx") 
+write.csv(iris, "iris.csv")  
+write_xlsx(list(worksheet_name = iris), "iris.xlsx")   
+write_rds(iris, "iris.rds")
 </i></font>
 
  

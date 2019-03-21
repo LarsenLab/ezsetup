@@ -1,0 +1,66 @@
+---
+title: "Data Exploration"
+author: "Author name(s) "
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  html_document:
+    toc: true 
+    toc_float: true
+    toc_depth: 3  
+    number_sections: false  
+    theme: flatly  
+  html_notebook:
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    number_sections: false
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+# setup chunk options
+knitr::opts_chunk$set(
+  echo = FALSE,
+  collapse = TRUE,
+  comment = "#>", 
+  tidy = TRUE
+)
+
+# load packages
+library(skimr)
+library(DataExplorer)
+library(naniar)
+```
+
+## Import data    
+
+## Explore data
+### explore variable types  
+```{r include=FALSE}
+iris %>% 
+  skim() %>% 
+  summary()
+```
+
+### explore missing data 
+#### - plot missing value profile
+```{r}
+plot_missing(airquality)
+```
+
+#### - plot missingness
+```{r}
+vis_miss(airquality)
+```
+
+#### - plot the number of missings for each variable
+```{r}
+gg_miss_var(airquality)
+gg_miss_which(airquality)
+```
+
+
+
+
+
+
