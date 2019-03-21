@@ -17,16 +17,14 @@ output:
     theme: flatly
 ---
 
-```{r setup chunk, include = FALSE}
+```{r setup, include = FALSE}
+library(DiagrammeR)
+
 knitr::opts_chunk$set(
   echo = FALSE,
   collapse = TRUE,
   comment = "#>"
 )
-```
-
-```{r setup libraries, include = FALSE}
-library(DiagrammeR)
 ```
 # Overview
 
@@ -34,31 +32,31 @@ library(DiagrammeR)
 
 # Project Files
 ## Rmd files
-overview  
-data_prep  
-data_explore    
-report 
+01_overview.Rmd  
+02_prep.Rmd  
+03_explore.Rmd    
+04_analysis.Rmd   
+05_report.Rmd
 
 ## R files
 
 # Work Flow
 
-```{r flow diag}
+```{r diagram}
 mermaid("
-graph TB
+graph LR
 classDef Rmd fill:#D2D2D2,stroke:#333,stroke-width:1px;
-A(overview) --> B1(import);
-B1 --> B2(prep);
-B2 --> C(explore <br> describe)
-C --> D(export)
-class A,B,C,D,E,F,G,H,J,K,L Rmd;
-")
+A(study overview) --> B(data prep);
+B --> C(data explore);
+C --> D(data analysis);
+D --> E(report);
+class A,B,C,D,E Rmd;
+", width = 700, height = 100)
 ```
 
 # Project Directory Structure
-```{r tree}
+```{bash}
 # please install Homebrew ( https://brew.sh ) and the tree command line tool ( ~/$ brew install tree) before running code below
 # html files are excluded from the tree
-
 # tree -I '*.html'
 ```
