@@ -46,7 +46,7 @@ knitr::opts_chunk$set(
 mermaid("
 graph LR
 classDef Rmd fill:#D2D2D2,stroke:#333,stroke-width:1px;
-A(study overview) --> B(data prep);
+A(study overview) --> B(data clean/preprocessing);
 B --> C(data explore);
 C --> D(data analysis);
 D --> E(report);
