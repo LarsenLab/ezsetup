@@ -76,7 +76,7 @@ dplyr::glimpse(proc_data)
 ggplot(data = proc_data, aes(x = x_var, y = y_var , color = col_var)) + geom_boxplot()  
 </i></font>
 
-```{r, fig.keep='all'} 
+```{r} 
 dplyr::glimpse(iris)  
 ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width , color = Species)) + geom_boxplot() 
 ```
