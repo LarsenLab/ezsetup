@@ -9,21 +9,13 @@ output:
     toc_depth: 3  
     number_sections: false  
     theme: flatly  
-  html_notebook:
-    toc: yes
-    toc_depth: 3
-    toc_float: yes
-    number_sections: false
-    theme: flatly
 ---
 
 ```{r setup, include = FALSE}
 library(DiagrammeR)
 
 knitr::opts_chunk$set(
-  echo = FALSE,
-  collapse = TRUE,
-  comment = "#>"
+  echo = FALSE
 )
 ```
 # Overview
@@ -43,15 +35,25 @@ knitr::opts_chunk$set(
 # Work Flow
 
 ```{r diagram}
-mermaid("
-graph LR
-classDef Rmd fill:#D2D2D2,stroke:#333,stroke-width:1px;
-A(study overview) --> B(data clean/preprocessing);
-B --> C(data explore);
-C --> D(data analysis);
-D --> E(report);
-class A,B,C,D,E Rmd;
-", width = 700, height = 100)
+grViz("digraph flowchart {
+      graph [overlap = true, fontsize = 8]
+      node [fontname = Courier, shape = box, color = grey, fillcolor = whitesmoke, style = filled] 
+      edge [dir = both,arrowsize = 0.4, color = grey]
+      tab1 [label = '@@1']
+      tab2 [label = '@@2']
+      tab3 [label = '@@3']
+      tab4 [label = '@@4']
+      tab5 [label = '@@5']
+
+      tab1 -> tab2 -> tab3 -> tab4 -> tab5;
+      }
+
+      [1]: 'study overview'
+      [2]: 'data clean/preprocessing'
+      [3]: 'data explore'
+      [4]: 'data analysis'
+      [5]: 'report'
+      ")
 ```
 
 # Project Directory Structure
