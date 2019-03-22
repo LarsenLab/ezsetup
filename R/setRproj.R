@@ -17,11 +17,14 @@
 setRproj <- function(fd_name)
 {
   # step 1: create the main folder, sub-folders, and readme.txt under each folder
-    fd_list <- list( "f0" = fd_name,
-                  "f1" = paste(fd_name,"data",sep = "/"),
-                  "f2" = paste(fd_name,"data/raw",sep = "/"),
-                  "f3" = paste(fd_name,"output",sep = "/"),
-                  "f4" = paste(fd_name,"docs",sep = "/"))
+  fd_list <- list( "f0" = fd_name,
+                   "f1" = paste(fd_name,"data",sep = "/"),
+                   "f2" = paste(fd_name,"data/raw",sep = "/"),
+                   "f3" = paste(fd_name,"data/proc",sep = "/"),
+                   "f4" = paste(fd_name,"output",sep = "/"),
+                   "f5" = paste(fd_name,"output/plots",sep = "/"),
+                   "f6" = paste(fd_name,"output/tables",sep = "/"),
+                   "f7" = paste(fd_name,"docs",sep = "/"))
 
   purrr::map(fd_list,dir.create)
   purrr::map(paste(fd_list,"readme.txt",sep = "/"),file.create)
