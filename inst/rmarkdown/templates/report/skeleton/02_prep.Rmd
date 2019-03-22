@@ -3,12 +3,6 @@ title: "Data Preparation"
 author: "Author name(s) "
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
-  html_document:
-    toc: true 
-    toc_float: true
-    toc_depth: 3  
-    number_sections: false  
-    theme: flatly  
   html_notebook:
     toc: yes
     toc_depth: 3
@@ -18,12 +12,8 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-# setup chunk options
 knitr::opts_chunk$set(
-  echo = FALSE,
-  collapse = TRUE,
-  comment = "#>", 
-  tidy = TRUE
+  echo = FALSE
 )
 
 # load packages
@@ -38,36 +28,35 @@ library(purrr)
 library(lubridate)
 library(janitor)
 library(skimr)
-library(data.table)
 
 # packages for data export
 library(writexl)
 ```
 
-## Import data
+## Import raw data
 ### - csv or excel data
 <font color="grey"><i> 
-read.csv("yourcsvfile.csv") 
+raw_data <- read.csv("/data/raw/yourcsvfile.csv") 
 </i></font>
 
 ### - RDS
 <font color="grey"><i>
-read_rds("yourrdsfile.rds")
+raw_data <- read_rds("/data/raw/yourrdsfile.rds")
 </i></font>
 
 ### - REDcap data
 <font color="grey"><i>
-redcap_read(redcap_uri = api.uri, token = api.token, raw_or_label = 'label',verbose = FALSE) 
+raw_data <- redcap_read(redcap_uri = yourredcapurl, token = apitoken, raw_or_label = 'label',verbose = FALSE) 
 </i></font>
 
 ### - flow cytometry data
 <font color="grey"><i>
-read.ncdfFlowSet(yourfcsfiles) 
+raw_data <- read.ncdfFlowSet("/data/raw/yourfcsfiles") 
 </i></font>
 
 ### - other types of data
 
-## Check the raw data
+## Check raw data
 <font color="grey"><i>
 dplyr::glimpse(raw_data)  
 ggplot(data = raw_data, aes(x = x_var, y = y_var , color = col_var)) + geom_boxplot()  
@@ -78,25 +67,26 @@ dplyr::glimpse(iris)
 ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width , color = Species)) + geom_boxplot() 
 ```
 
-## Clean data
+## Process raw data
+<font color="grey"> code to clean the raw data </font>
 
-## Check transformed data
+## Check processed data
 <font color="grey"><i>
-dplyr::glimpse(clean_data)  
-ggplot(data = clean_data, aes(x = x_var, y = y_var , color = col_var)) + geom_boxplot()  
+dplyr::glimpse(proc_data)  
+ggplot(data = proc_data, aes(x = x_var, y = y_var , color = col_var)) + geom_boxplot()  
 </i></font>
 
-```{r} 
+```{r, fig.keep='all'} 
 dplyr::glimpse(iris)  
 ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width , color = Species)) + geom_boxplot() 
 ```
 
-## Export data
+## Export processed data
 ### - export to csv/excel/RDS 
 <font color="grey"><i> 
-write.csv(iris, "iris.csv")  
-write_xlsx(list(worksheet_name = iris), "iris.xlsx")   
-write_rds(iris, "iris.rds")
+write.csv(proc_data, "/data/proc/processeddataname.csv")  
+write_xlsx(list(worksheet_name = proc_data), "/data/proc/processeddataname.xlsx")   
+write_rds(proc_data, "/data/proc/processeddataname.rds")
 </i></font>
 
  
