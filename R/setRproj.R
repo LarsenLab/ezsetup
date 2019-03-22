@@ -1,6 +1,3 @@
-
-#setRproj("/Users/xzhan50/Documents/data_wk/joan/zhang/test")
-
 #' Title
 #' funtion to set up a R project
 #' @param fd_name
