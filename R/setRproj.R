@@ -22,8 +22,6 @@ setRproj <- function(fd_name)
                    "f2" = paste(fd_name,"data/raw",sep = "/"),
                    "f3" = paste(fd_name,"data/proc",sep = "/"),
                    "f4" = paste(fd_name,"output",sep = "/"),
-                   "f5" = paste(fd_name,"output/plots",sep = "/"),
-                   "f6" = paste(fd_name,"output/tables",sep = "/"),
                    "f7" = paste(fd_name,"docs",sep = "/"))
 
   purrr::map(fd_list,dir.create)
