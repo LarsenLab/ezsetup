@@ -36,7 +36,7 @@ library(writexl)
 ## Import raw data
 ### - csv or excel data
 <font color="grey"><i> 
-raw_data <- read.csv("/data/raw/yourcsvfile.csv") 
+raw_data <- read_csv("/data/raw/yourcsvfile.csv") 
 </i></font>
 
 ### - RDS
