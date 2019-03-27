@@ -48,7 +48,7 @@ print(table1$CatTable,catDigits = 1,pDigits=2)
 ```
 
 ## Survival analysis
-- Survival cure
+- Survival curve
 - Cox model
 
 ---
