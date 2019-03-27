@@ -22,14 +22,14 @@ library(naniar)
 ```
 
 ## Import data 
-- introduciton of the data
+- introduction to data
 
 ## Explore data
 ### explore variable type 
-### explore missing data 
-- plot missing value profile
-- plot missingness
-- plot the number of missings for each variable
+### explore missingness 
+- which variables contain a missing value
+- frequency of missings for each variable
+- number of missings for each variable
 
 --- 
 
@@ -38,34 +38,35 @@ iris %>%
   skim() %>% 
   summary()
 ```
-- variable type
+- explore variable type
+
+
+---
+
+- explore missingness: which variables contain a missing value
+```{r}
+gg_miss_which(airquality)
+```
 
 --- 
 
-- missing value profile
+- explore missingness: frequency of missing values
 ```{r}
 plot_missing(airquality)
 ```
 
 ---
 
-- another way to look the missingness
+- explore missingness: another way to look the frequency of missing values
 ```{r}
 vis_miss(airquality)
 ```
 
 ---
 
-- number of missings for each variable
+- explore missingness : number of missings for each variable
 ```{r}
 gg_miss_var(airquality)
-```
-
----
-
-- which variables contain a missing value
-```{r}
-gg_miss_which(airquality)
 ```
 
 
