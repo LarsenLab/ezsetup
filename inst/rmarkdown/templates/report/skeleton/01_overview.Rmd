@@ -56,9 +56,14 @@ grViz("digraph flowchart {
       ")
 ```
 
-# Project Directory Structure
-```{bash}
+```{bash dir structure}
 # please install Homebrew ( https://brew.sh ) and the tree command line tool ( ~/$ brew install tree) before running code below
 # html files are excluded from the tree
-# tree -I '*.html'
+tree  -I '*.html' -H baseHREF --nolinks -o fd_str_tree.html
+```
+
+```{r}
+htmltools::includeHTML("fd_str_tree.html")
+if (file.exists("fd_str_tree.html")) 
+    unlink("fd_str_tree.html")
 ```
