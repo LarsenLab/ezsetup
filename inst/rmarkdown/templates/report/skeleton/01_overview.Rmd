@@ -9,6 +9,7 @@ output:
     toc_depth: 3  
     number_sections: false  
     theme: flatly  
+    css: style.css
 ---
 
 ```{r setup, include = FALSE}
@@ -59,7 +60,7 @@ grViz("digraph flowchart {
 ```{bash dir structure}
 # please install Homebrew ( https://brew.sh ) and the tree command line tool ( ~/$ brew install tree) before running code below
 # html files are excluded from the tree
-tree  -I '*.html' -H baseHREF --nolinks -o fd_str_tree.html
+tree  -I '*.html|*.css' -H '' --nolinks -o fd_str_tree.html
 ```
 
 ```{r}
