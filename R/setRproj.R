@@ -24,8 +24,8 @@ setRproj <- function(fd_name)
                    "f4" = paste(fd_name,"output",sep = "/"),
                    "f7" = paste(fd_name,"docs",sep = "/"))
 
-  purrr::map(fd_list,dir.create)
-  purrr::map(paste(fd_list,"readme.txt",sep = "/"),file.create)
+  map(fd_list,dir.create)
+  map(paste(fd_list,"readme.txt",sep = "/"),file.create)
 
   # step 2: create .Rproj file from devtools package, and make a copy with the subfolder name
   path <- file.path(fd_name, paste0(gsub(".*/","",fd_name), ".Rproj"))
@@ -35,7 +35,7 @@ setRproj <- function(fd_name)
 
   # step 3: setup initial rmd files
   fd_from <- paste(path.package("ezsetup"),"rmarkdown/templates/report/skeleton",sep="/")
-  list_of_files <- list.files(fd_from, ".Rmd")
+  list_of_files <- list.files(fd_from, ".Rmd|.css")
   file.copy(file.path(fd_from,list_of_files), fd_name)
 }
 
