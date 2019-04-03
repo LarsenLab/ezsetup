@@ -3,10 +3,12 @@ title: "Project Report"
 author: "Author name(s) "
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
-   ioslides_presentation:
+    ioslides_presentation:
      widescreen: true
      smaller: true
      incremental: true
+subtitle: An example pf project report
+
 ---
 
 ```{r setup, include=FALSE}
@@ -22,8 +24,9 @@ library(survival)
 # other packages
 ```
 
+
 ## Descriptive statistics
-- continuous variables
+- continuous variables 
 - categorical variables
 
 ```{r}
@@ -35,14 +38,15 @@ table1 <- CreateTableOne(vars = listVars, data = pbc, factorVars = catVars,strat
 
 ---
 
-table1 - continuous variables
+##  Descriptive statistics - continuous variables
+
 ```{r}
 print(table1$ContTable,contDigits = 1,pDigits=2)
 ```
 
 ---
 
-table1 - categorical variables
+##  Descriptive statistics - categorical variables
 ```{r}
 print(table1$CatTable,catDigits = 1,pDigits=2)
 ```
@@ -53,8 +57,7 @@ print(table1$CatTable,catDigits = 1,pDigits=2)
 
 ---
 
-survival curve
-
+## Survival analysis - Kaplan-Meier curve
 ``` {r}
 surv <- survfit(Surv(time, status) ~ x, data = aml) 
 plot(surv, lty = 1:2) 
@@ -62,7 +65,7 @@ plot(surv, lty = 1:2)
 
 ---
 
-cox model result
+## Survival analysis - cox model result
 ``` {r}
 test1 <- list(start=c(1,2,5,2,1,7,3,4,8,8), 
               stop=c(2,3,6,7,8,9,9,9,14,17), 
