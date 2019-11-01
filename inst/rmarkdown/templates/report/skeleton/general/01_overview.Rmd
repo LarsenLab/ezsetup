@@ -1,6 +1,6 @@
 ---
 title: "Title of the project"
-author: "Author"
+author: "Author name(s) "
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
   html_document:
