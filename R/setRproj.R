@@ -15,7 +15,7 @@
 #' setProj("/Users/newfolder")
 #' }
 
-setRproj <- function(fd_name, proj_type = "")
+setRproj <- function(fd_name, proj_type)
 {
   if (missing(fd_name)){
     warning("please enter the project path and speficy the proj_type")
@@ -40,8 +40,12 @@ setRproj <- function(fd_name, proj_type = "")
 
   if (proj_type == "general") {
     fd_from <- paste(path.package("ezsetup"),"rmarkdown/templates/report/skeleton/general",sep = "/")
-  } else if (proj_type %in% c("sc", "SC", "singlecell", "SingleCell", "single_cell")) {
+  } else if (proj_type %in% c("sc", "SC", "singlecell", "single_cell")) {
     fd_from <- paste(path.package("ezsetup"),"rmarkdown/templates/report/skeleton/sc",sep = "/")
+  } else if (proj_type %in% c("flow", "Flow")) {
+    fd_from <- paste(path.package("ezsetup"),"rmarkdown/templates/report/skeleton/flow",sep = "/")
+  } else if (proj_type %in% c("metagen")) {
+    fd_from <- paste(path.package("ezsetup"),"rmarkdown/templates/report/skeleton/metagen",sep = "/")
   } else {
     fd_from <- paste(path.package("ezsetup"),"rmarkdown/templates/report/skeleton/general",sep = "/")
   }
