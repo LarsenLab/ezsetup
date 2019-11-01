@@ -17,8 +17,8 @@ development of ezsetup package
 
 4. test run : 
 library(ezsetup)
-setRproj("/Documents/NameYourFolder", "singlecell")
+setRproj("~/Documents/NameYourFolder", "general")
 
 <br> **library(ezsetup)**
-<br> **setRproj("~/Documents/NameYourFolder", "singlecell")**
+<br> **setRproj("~/Documents/SC_project", "singlecell")**
 
