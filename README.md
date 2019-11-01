@@ -26,5 +26,5 @@ library(ezsetup)
 setRproj("/Documents/NameYourFolder", "singlecell")
 =======
 <br> **library(ezsetup)**
-<br> **setRproj("/Documents/NameYourFolder")**
+<br> **setRproj("/Documents/NameYourFolder", "singlecell)**
 >>>>>>> 64ab3fbb17c0cc5426352ac7e3ecb6cb15c4f4d9
