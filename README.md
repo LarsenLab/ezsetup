@@ -4,7 +4,7 @@ development of ezsetup package
 1. development : * run a check before commit *
 whenever a change has made to the source code, please run a "check" before committing.
 A package has to be error and warning free, it's ok if there are notes remaining after checking.
-To run a check : click Build tab on the Enviroment HIstory panel > click Check . 
+To run a check : click Build tab on the Enviroment History panel > click Check . 
 
 2. installation : * need to turn the repo to public *
 library(devtools)
@@ -16,4 +16,4 @@ The simpliest way to update this package is reinstall it.
 
 4. test run : 
 library(ezsetup)
-setRproj("/Documents/NameYourFolder")
+setRproj("/Documents/NameYourFolder", "singlecell")

@@ -5,10 +5,13 @@
 \title{Title
 funtion to set up a R project}
 \usage{
-setRproj(fd_name)
+setRproj(fd_name, proj_type = "")
 }
 \arguments{
-\item{fd_name}{working folder/project name of the project}
+\item{fd_name}{folder name.}
+
+\item{proj_type}{project type.
+working folder/project name of the project}
 }
 \value{
 .Rproj and folder structure of the project
