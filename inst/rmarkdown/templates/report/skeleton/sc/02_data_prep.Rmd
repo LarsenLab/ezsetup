@@ -5,61 +5,664 @@ output:
     html_document:
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-    fd_s3:   "PleaseInput_S3_Path"
-    fd_sce:  "PleaseInput_SCE_Folder_Name"
-    obj_sce: "PleaseInput_SCE_Object_Name"
-    fd_se:   "PleaseInput_Seurat_Folder_Name"
-    obj_se:  "PleaseInput_Seurat_Object_Name"
+    fd_s3:   "S3_Path"
+    fd_ec2:  "EC2_Path"
+    sample_name: "Sample_Name"
 ---
  
-```{r, include=FALSE}
+```{r info, echo = FALSE}
 library(DropletUtils)
 library(Seurat)
 
+# paste fd_ec2 info with sample name
+sample_name <- paste(params$fd_ec2, params$sample_name, sep = "")
+
+# create folder named "objects" to host output objects 
+obj_path <- file.path(paste(params$fd_ec2, "objects/", sep=""))
+
 # work on params to export variable from R to bash
 Sys.setenv(fd_s3 = params$fd_s3) 
-Sys.setenv(fd_sce = params$fd_sce)
-Sys.setenv(fd_se = params$fd_se)
+Sys.setenv(fd_ec2 = params$fd_ec2)
 ```
- 
+
 ## SCE
 ### sync file from s3 to ec2
 ```{r}
-system("aws s3 sync $fd_s3 $fd_sce --region us-east-2")
+system("aws s3 sync $fd_s3 $fd_ec2 --region us-east-2")
 ```
 
-### unzip and rename files for SCE format
+### unzip and rename files to SingleCellExperiment input format
 ```{bash}
-gunzip "${fd_sce}barcodes.tsv.gz"
-gunzip "${fd_sce}matrix.mtx.gz"
-gunzip "${fd_sce}features.tsv.gz"
-mv "${fd_sce}features.tsv" "${fd_sce}genes.tsv"
+gunzip "${fd_ec2}barcodes.tsv.gz"
+gunzip "${fd_ec2}matrix.mtx.gz"
+gunzip "${fd_ec2}features.tsv.gz"
+mv "${fd_ec2}features.tsv" "${fd_ec2}genes.tsv"
 ```
 
-### create and save sce object
+### create and save SCE object
 ```{r sce}
-sce_obj <- read10xCounts(params$fd_sce)
-save(sce_obj, file = params$obj_sce)
+# create objects folder under fd_ec2
+dir.create(obj_path)
+sce_obj <- read10xCounts(params$fd_ec2)
+save(sce_obj, file = paste(obj_path, "sce_raw.RData", sep = ""), sep = "/")
 rm(sce_obj)
 ```
 
 ## Seurat 
 ### sync file from s3 to ec2
 ```{r}
-system("aws s3 sync $fd_s3 $fd_se --region us-east-2")
+system("aws s3 sync $fd_s3 $fd_ec2 --region us-east-2")
 ```
 
 ### create and save Seurat object
 ```{r seurat}
-dat <- Read10X(data.dir = params$fd_se) 
+dat <- Read10X(data.dir = params$fd_ec2) 
 rownames(x = dat[["Antibody Capture"]]) <- gsub(pattern = "_TotalSeqC", replacement = "", x = rownames(x = dat[["Antibody Capture"]]))
 
 se_obj <- CreateSeuratObject(counts = dat[["Gene Expression"]])
 se_obj[["ADT"]] <- CreateAssayObject(counts = dat[["Antibody Capture"]][, colnames(se_obj)])
 
-save(se_obj, file = params$obj_se)
+save(se_obj, file = paste(obj_path, "seurat_raw.RData",sep = ""), sep = "/")
 rm(dat, se_obj)
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

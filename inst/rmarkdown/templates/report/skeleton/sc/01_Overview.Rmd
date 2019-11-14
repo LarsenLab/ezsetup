@@ -19,24 +19,38 @@ knitr::opts_chunk$set(
 )
 ```
 
-### Abstract
+# Abstract
 - a brief overview
 - research question(s) 
 - experimental/analytical approaches 
 - general conclusions
 
-### Data Summary
+# Data Summary
 - data definition
 - data distribution
 - ...
 
-### Analysis Result
+# Analysis Result
 - visualization
 - statistical tables 
 - ...
 
-### Discussion
+# Discussion
 
-### References
+# References
 - list of packages used for the analysis
 - ...
+
+# Project Directory List
+- please install [Homebrew](https://brew.sh) and the tree command line tool ( ~/$ brew install tree) before running code below
+
+```{bash dir structure, results = 'hide' }
+html files are excluded from the tree
+tree  -I '*.html|*.css' -H '' --nolinks -o fd_str_tree.html
+```
+
+```{r}
+htmltools::includeHTML("fd_str_tree.html")
+if (file.exists("fd_str_tree.html")) 
+    unlink("fd_str_tree.html")
+```

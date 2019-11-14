@@ -1,0 +1,1010 @@
+---
+title: "Filter low quality cells and features"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+    number_sections: false
+    theme: flatly
+params:
+    flag:    "seurat"
+    obj_in: "Object_Name"
+    cut_mt_se: 0.95
+    cut_nFeature_se: 0.90
+    cut_mad_sce: 3
+    prt_name: "CD4"
+    obj_out: "Object_Name_Of_To_Save"
+---
+    
+```{r, include = FALSE}
+library(DropletUtils)
+library(Seurat)
+library(outliers)
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+flag <- tolower(params$flag)
+is_seurat <- ifelse(flag == "seurat", TRUE, FALSE)
+```
+
+```{r}
+if (flag == "seurat"){
+    print("QC based on Seurat object")
+    
+    # Load the .RData, and store the name of the loaded object in tmp
+    tmp = load(params$obj_in)
+    # Get the object by its name
+    obj = get(tmp)
+    rm(tmp)
+    
+    # add percent of mito to the object
+    mito.features <- grep(pattern = "^MT-", x = rownames(x = obj), value = TRUE)
+    percent.mt <- Matrix::colSums(x = GetAssayData(object = obj, slot = 'counts')[mito.features, ]) / Matrix::colSums(x = GetAssayData(object = obj, slot = 'counts'))
+    obj[['percent.mt']] <- percent.mt
+} else {
+    print("QC based on SingleCellExperiment object")
+    
+    # Load the .RData, and store the name of the loaded object in tmp
+    tmp = load(params$obj_in)
+    # Get the object by its name
+    obj = get(tmp)
+    rm(tmp)
+}
+```
+
+### RNA
+#### Raw data
+##### Dimension
+```{r info}
+    print(obj)
+    num_f_ori <- length(row.names(obj))
+    num_c_ori <- length(colnames(obj))
+```
+
+##### Visualization 
+```{r plots_before, eval = is_seurat}
+        vln_before <- VlnPlot(obj, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), pt.size = 0.005, ncol = 3) 
+        sct1_before <- FeatureScatter(obj, feature1 = "nCount_RNA", feature2 = "percent.mt") + theme(legend.position="bottom") + theme(legend.title=element_blank())
+        sct2_before <- FeatureScatter(obj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") + theme(legend.position="bottom") + theme(legend.title=element_blank())
+        print(vln_before)
+        print(CombinePlots(plots = list(sct1_before, sct2_before)))
+        #rank of cells(barcodes) on total UMI(Unique Molecular Identifier) count average rank of each cell/barcode corss gene/total UMI count
+        bcrank_before <- barcodeRanks(obj)
+        uniq = !duplicated(bcrank_before$rank)
+        plot(bcrank_before$rank[uniq], bcrank_before$total[uniq], log = "xy", main = "barcode ranking - before QC", xlab = "Rank", ylab = "Total count", cex = 0.5, cex.lab = 1.2)
+        abline(h = metadata(bcrank_before)$knee, col = "blue", lty = 2) 
+        text(metadata(bcrank_before)$knee, "knee")
+```
+
+#### Filtered data
+##### Dimension
+```{r, eval = is_seurat}
+    find_ot <- function(vec, prob){
+        otvalue <- vec[scores(vec, type = "chisq", prob = prob) == TRUE]
+        lo = max(otvalue[otvalue<median(vec)])
+        hi = min(otvalue[otvalue>median(vec)])
+        return(list(lo,hi))
+    }
+
+    # cell level
+    ot_mito <- as.numeric(find_ot(obj@meta.data$percent.mt, params$cut_mt_se))[2]
+    ot_nfeature <- as.numeric(find_ot(obj@meta.data$nFeature_RNA, params$cut_nFeature_se))
+    ot_ncount <- as.numeric(find_ot(obj@meta.data$nCount_RNA, 0.9))
+    # note: ot_ncount is not used in the subset()
+    obj <- subset(obj, subset = nFeature_RNA > ot_nfeature[1] & nFeature_RNA < ot_nfeature[2] & percent.mt < ot_mito) 
+    assay <- as.matrix(GetAssayData(object = obj, slot = "counts"))
+    # convert count data to binary format in order to calculate number of cells of each feature
+    assay <- ifelse(assay > 0, 1, 0)
+    genesum <- rowSums(assay)
+    # include features detected in at least 3 cells
+    genelist <- names(genesum)[genesum > 3] 
+
+    obj <- subset(obj, features = c(genelist, rownames(obj@assays$ADT)))  # have to specify ADT name to avoid deletion due to duplicate names between ADT and RNA
+    print(obj)
+    num_f_flt <- length(row.names(obj))
+    num_c_flt <- length(colnames(obj))
+    # plot data dimension before and after
+    dat_comp <- tibble(c(num_f_ori,num_c_ori), c(num_f_flt, num_c_flt)) 
+    colnames(dat_comp) <- c("raw", "filtered")
+    rownames(dat_comp) <- c("feature #", "cell #")
+    dat_comp$removed <- dat_comp$raw - dat_comp$filtered
+    kable(dat_comp, caption = "comparison of data dimension") %>% kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+##### Visualization
+```{r viz, eval = is_seurat}
+    vln_after <- VlnPlot(obj, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),  pt.size = 0.005, ncol = 3)
+    sct1_after <- FeatureScatter(obj, feature1 = "nCount_RNA", feature2 = "percent.mt") + theme(legend.position="bottom") + theme(legend.title=element_blank())
+    sct2_after <- FeatureScatter(obj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") + theme(legend.position="bottom") + theme(legend.title=element_blank())
+    print(vln_after)
+    print(CombinePlots(plots = list(sct1_after, sct2_after)))
+    # rank of cells(barcodes) on total UMI count average rank of each cell/barcode corss gene/total UMI count
+    bcrank_after <- barcodeRanks(obj)
+    uniq = !duplicated(bcrank_after$rank)
+    plot(bcrank_after$rank[uniq], bcrank_after$total[uniq], log="xy", main = "barcode ranking - atfer QC", xlab = "Rank", ylab = "Total count", cex = 0.5, cex.lab = 1.2)
+    abline(h = metadata(bcrank_after)$knee, col = "blue", lty = 2) 
+    text(metadata(bcrank_after)$knee, "knee")
+```
+
+#### Pre-processed data
+##### UMAP on clusters
+```{r clus, eval = is_seurat}
+    obj <- NormalizeData(obj, normalization.method = "LogNormalize", scale.factor = 10000)
+    obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 2000)
+    all.genes <- rownames(x = obj)
+    # have check these 4 samples, they don't need regress out cc genes
+    obj <- ScaleData(object = obj, all.genes, vars.to.regress = c("nCount_RNA", "percent.mito"))
+    obj <- RunPCA(obj, features = VariableFeatures(object = obj))
+    obj <- FindNeighbors(obj, dims = 1:10)
+    obj <- FindClusters(obj, resolution = 0.8, verbose = FALSE)
+    # run and plot UMAP
+    obj <- RunUMAP(obj, dims = 1:10, verbose = FALSE)
+    print(LabelClusters(plot = DimPlot(obj, reduction = "umap", group.by = "RNA_snn_res.0.8"), id = "RNA_snn_res.0.8", size = 4))
+    # find markers for every cluster compared to all remaining cells, report only the positive ones
+    obj_markers <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+    # heatmap on top10 markers 
+    topn_gene <- obj_markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC) %>%
+                    mutate_if(is.numeric, round, 3) %>%
+                    select(gene, cluster, avg_logFC, pct.1, pct.2, p_val, p_val_adj)
+    print(DoHeatmap(obj, features = topn_gene$gene) + NoLegend() + ggtitle("top10 markers") + theme(axis.text=element_text(size=4)))
+```
+
+##### top10 markers {.tabset} 
+```{r,  eval = is_seurat, results = 'asis'}
+    for (i in 1:length(unique(obj_markers$cluster))) {
+        j = i - 1
+        cat("###### ", "cluster", i, "\n\n") # 注意这井号的数量要比section title的井号数量多一个，要不然tabset就乱了
+        tmp <- topn_gene[topn_gene$cluster == j, ]
+        print(kable(tmp, caption = "table of top10 markers") %>% kable_styling(bootstrap_options = "striped", full_width = F))
+        }
+```
+
+### ADT
+```{r, eval = is_seurat}
+    obj <- NormalizeData(obj, assay = "ADT", normalization.method = "CLR")
+    obj <- ScaleData(obj, assay = "ADT")
+    adt <- as.matrix(obj@assays$ADT@scale.data)
+    
+    if (params$prt_name %in% rownames(obj@assays$ADT)) {
+        adt <- adt[rownames(adt) == params$prt_name, ]
+    adt <- data.frame(adt)
+    print(paste(params$prt_name, "quantiles", sep = " "))
+    # tbl_adt <- as.data.frame(quantile(adt$adt, prob = seq(0, 1, 0.05))) %>%
+    #             rename("value" = 1) %>%  # again, renaming issue with dplr, ok, i use the old way to rename - Nov-08-2019
+    #             rownames_to_column("pctl") %>%
+    #             mutate(value = round(value,2))
+    tbl_adt <- as.data.frame(quantile(adt$adt, prob = seq(0, 1, 0.05))) %>% rownames_to_column("pctl") 
+    colnames(tbl_adt) <- c("pctl", "value")
+    tbl_adt$value<- round(tbl_adt$value, 2)
+
+    # work on variables for density plot
+    dt <- data.frame(x = c(1:dim(adt)[1]), y = adt$adt)
+    dens <- density(dt$y)
+    df <- data.frame(x = dens$x, y = dens$y)
+    probs <- seq(0,1,0.05)
+    quantiles <- quantile(dt$y, prob = probs)
+    df$quant <- factor(findInterval(df$x,quantiles))
+    plot_adt <- ggplot(df, aes(x,y)) + ylab("density") + xlab("scaled values") + geom_line() + ggtitle(paste(params$prt_name, "distribution", sep = " ")) + geom_ribbon(aes(ymin = 0, ymax = y, fill = quant)) + scale_x_continuous(breaks = quantiles) + scale_fill_brewer(guide = "none") + theme(axis.text.x = element_text(angle = 90), axis.text = element_text(size = 6))
+    tbl_adt_t <- tbl_adt
+    tbl_adt_t <- t(tbl_adt[,-1])
+    colnames(tbl_adt_t) <- tbl_adt$pctl
+    tbl_adt_t <- as.data.frame(tbl_adt_t)
+    print(tbl_adt_t)
+    print(plot_adt)
+    }
+    
+```
+
+```{r save}
+    save(obj, file = params$obj_out)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
