@@ -35,8 +35,7 @@ setRproj <- function(fd_name, proj_type)
     # step 2: create .Rproj file from devtools package, and make a copy with the subfolder name
     path <- file.path(fd_name, paste0(gsub(".*/", "", fd_name), ".Rproj"))
     #template_path <- system.file("templates/template.Rproj", package = "devtools")
-    #template_path <- system.file("templates/template.Rproj", package = "ezsetup")
-    template_path <- "rmarkdown/templates/report/template.Rproj"
+    template_path <- system.file("templates/template.Rproj",package = "ezsetup")
     file.copy(template_path, path)
   }
 
