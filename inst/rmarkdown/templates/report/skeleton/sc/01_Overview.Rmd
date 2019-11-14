@@ -1,0 +1,42 @@
+---
+title: "SC RNA-SEQ"
+author: "Author name(s) "
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  html_document:
+    toc: true 
+    toc_float: true
+    toc_depth: 3  
+    number_sections: false  
+    theme: flatly  
+    css: style.css
+---
+
+```{r setup, include = FALSE}
+library(DiagrammeR)
+knitr::opts_chunk$set(
+  echo = FALSE
+)
+```
+
+### Abstract
+- a brief overview
+- research question(s) 
+- experimental/analytical approaches 
+- general conclusions
+
+### Data Summary
+- data definition
+- data distribution
+- ...
+
+### Analysis Result
+- visualization
+- statistical tables 
+- ...
+
+### Discussion
+
+### References
+- list of packages used for the analysis
+- ...

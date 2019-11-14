@@ -52,6 +52,11 @@ setRproj <- function(fd_name, proj_type)
 
   list_of_files <- list.files(fd_from, ".Rmd|.css")
   file.copy(file.path(fd_from,list_of_files), fd_name)
+
+  fd_from2 <- paste(path.package("ezsetup"),"rmarkdown/templates/report/skeleton",sep = "/")
+  list_of_files2 <- list.files(fd_from2, ".Rmd|.css")
+  file.copy(file.path(fd_from2,list_of_files2), fd_name)
+
 }
 
 
