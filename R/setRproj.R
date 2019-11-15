@@ -35,7 +35,7 @@ setRproj <- function(fd_name, proj_type)
     map(paste(fd_list, "readme.txt", sep = "/"), file.create)
 
     # step 2: create .Rproj file from devtools package, and make a copy with the subfolder name
-    path <- file.path(fd_name, paste0(gsub(".*/", "", fd_name), ".Rproj"))
+    #path <- file.path(fd_name, paste0(gsub(".*/", "", fd_name), ".Rproj"))
     #template_path <- system.file("templates/template.Rproj", package = "devtools")
     # template_path <- system.file("templates/template.Rproj",package = "ezsetup")
     # file.copy(template_path, path)
@@ -63,6 +63,8 @@ setRproj <- function(fd_name, proj_type)
   list_of_files_skel <- list.files(fd_from_skel, ".Rmd|.css")
   file.copy(file.path(fd_from_skel,list_of_files_skel), fd_name)
 
+  # remove the R folder created by create_project
+  unlink(paste(fd_name, "R", sep = "/"), recursive = TRUE)
 }
 
 
