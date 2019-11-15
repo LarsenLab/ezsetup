@@ -16,4 +16,7 @@ Suggests:
 VignetteBuilder: knitr
 Imports:
   devtools,
-  purrr
+  purrr,
+  usethis,
+  rstudioapi
+

@@ -3,3 +3,5 @@
 export(setRproj)
 import(devtools)
 import(purrr)
+import(rstudioapi)
+import(usethis)
