@@ -34,11 +34,7 @@ setRproj <- function(fd_name, proj_type)
     map(fd_list, dir.create)
     map(paste(fd_list, "readme.txt", sep = "/"), file.create)
 
-    # step 2: create .Rproj file from devtools package, and make a copy with the subfolder name
-    #path <- file.path(fd_name, paste0(gsub(".*/", "", fd_name), ".Rproj"))
-    #template_path <- system.file("templates/template.Rproj", package = "devtools")
-    # template_path <- system.file("templates/template.Rproj",package = "ezsetup")
-    # file.copy(template_path, path)
+    # step 2: create .Rproj file with Hadley's "usethis" package instead of previously devtools' solution
     create_project(fd_name, rstudio = rstudioapi::isAvailable(), open = FALSE)
   }
 
@@ -58,12 +54,12 @@ setRproj <- function(fd_name, proj_type)
   list_of_files <- list.files(fd_from, ".Rmd|.css")
   file.copy(file.path(fd_from,list_of_files), fd_name)
 
-  # copy skeleton.Rmd and style.css from skeleton folder
+  # copy skeleton.Rmd and style.css from skeleton folder for tree view
   fd_from_skel <- paste(path.package("ezsetup"),"rmarkdown/templates/report/skeleton",sep = "/")
   list_of_files_skel <- list.files(fd_from_skel, ".Rmd|.css")
   file.copy(file.path(fd_from_skel,list_of_files_skel), fd_name)
 
-  # remove the R folder created by create_project
+  # remove the R folder created by create_project()
   unlink(paste(fd_name, "R", sep = "/"), recursive = TRUE)
 }
 
