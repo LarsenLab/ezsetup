@@ -1,19 +1,19 @@
 ---
 title: "Pre-processing"
 output:
-  html_document:
-  toc: yes
-toc_depth: 5
-toc_float: yes
-number_sections: false
+    html_document:
+      toc: yes
+      toc_depth: 5
+      toc_float: yes
+      number_sections: false
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  obj_in: "Raw_Object"
-  obj_in_type: "Seurat_or_SCE_Object"
-  obj_in_cell_feature: "List_of_Cell_Feature_to_Keep"
-  obj_out: "Object_Name_to_Save"
+    obj_in: "Raw_Object"
+    obj_in_type: "seurat"
+    obj_in_cell_feature: "List_of_Cell_Feature_to_Keep"
+    obj_out: "Object_Name_to_Save"
 ---
-
+ 
 ```{r, include = FALSE}
 library(DropletUtils)
 library(Seurat)
@@ -28,93 +28,111 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 obj_in_type <- tolower(params$obj_in_type)
 is_seurat <- ifelse(obj_in_type == "seurat", TRUE, FALSE)
+
+ifelse(!dir.exists(paste(getwd(), "data/proc", sep = "/")), 
+       dir.create(paste(getwd(), "data/proc", sep = "/"), showWarnings = FALSE, recursive = TRUE), FALSE)
+out_path <- paste(getwd(), "data/proc", sep = "/")
 ```
 
 ### Load object
 ```{r load, echo = FALSE, message = FALSE}
-# load raw data
-tmp = load(params$obj_in)
-obj_in = get(tmp)
-rm(tmp)
-
-# load QCed data and pull out cell and feature names
-tmp = load(params$obj_in_cell_feature)
-obj_in_cell_feature = get(tmp)
-rm(tmp)
-
-# filter raw data with QCed data
-obj_in <- subset(x = obj_in, cells = obj_in_cell_feature$cell_keep)
-obj_in <- subset(x = obj_in, features = c(obj_in_cell_feature$feature_keep, rownames(obj_in@assays$ADT))) # add ADT features to avoid accidental removal
-
-obj <- obj_in
-rm(obj_in, obj_in_cell_feature)
+    # load raw data
+    # go to data/raw folder if only data name for params$obj_in; otherwise, load the file with the entire path
+    if (file.exists(paste(paste(getwd(), "data/proc", sep = "/"), params$obj_in, sep = "/"))){
+      tmp = load(paste(paste(getwd(), "data/proc", sep = "/"), params$obj_in, sep = "/"))
+    } else if (file.exists(params$obj_in)) {
+      tmp = load(params$obj_in)
+    } else {
+      warning("Raw object does not exist")
+    }
+    obj_in = get(tmp)
+    rm(tmp)
+    
+    # load QCed data and pull out cell and feature names
+    # go to data/proc folder if only data name for params$obj_in_cell_feature; otherwise, load the file with the entire path
+    if (file.exists(paste(paste(getwd(), "data/proc", sep = "/"), params$obj_in_cell_feature, sep = "/"))){
+      tmp = load(paste(paste(getwd(), "data/proc", sep = "/"), params$obj_in_cell_feature, sep = "/"))
+    } else if (file.exists(params$obj_in_cell_feature)) {
+      tmp = load(params$obj_in_cell_feature)
+    } else {
+      warning("List ovbject does not exist")
+    }
+    obj_in_cell_feature = get(tmp)
+    rm(tmp)
+    
+    # filter raw data with QCed data
+    obj_in <- subset(x = obj_in, cells = obj_in_cell_feature$cell_keep)
+    obj_in <- subset(x = obj_in, features = c(obj_in_cell_feature$feature_keep, rownames(obj_in@assays$ADT))) # add ADT features to avoid accidental removal
+    
+    obj <- obj_in
+    rm(obj_in, obj_in_cell_feature)
 ```
 
 ### RNA
 #### Normalization
 ```{r rna-norm, eval = is_seurat}
-# standard log-normalization
-obj <- NormalizeData(obj)
+    # standard log-normalization
+    obj <- NormalizeData(obj)
 ```
 
 #### Variable gene selection
 ```{r rna-hvg, eval = is_seurat}
-obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 2000)
+    obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 2000)
+    
+    # Identify the 10 most highly variable genes
+    top10_hvg <- head(VariableFeatures(obj), 10)
 
-# Identify the 10 most highly variable genes
-top10_hvg <- head(VariableFeatures(obj), 10)
-
-# plot variable features with labels
-plot1 <- VariableFeaturePlot(obj) + theme(legend.position="bottom") + theme(legend.title=element_blank())
-plot2 <- LabelPoints(plot = plot1, points = top10_hvg, repel = TRUE) + theme(legend.position="bottom") + theme(legend.title=element_blank())
-print(plot2)
+    # plot variable features with labels
+    plot1 <- VariableFeaturePlot(obj) + theme(legend.position="bottom") + theme(legend.title=element_blank())
+    plot2 <- LabelPoints(plot = plot1, points = top10_hvg, repel = TRUE) + theme(legend.position="bottom") + theme(legend.title=element_blank())
+    print(plot2)
 ```
 
 #### Data scaling
 ```{r rna-scale, eval = is_seurat}
-# standard scaling (no regression), scale on 2000 variables features
-obj <- ScaleData(object = obj, vars.to.regress = c("nCount_RNA", "percent.mito"))
+    # standard scaling (no regression), scale on 2000 variables features
+    obj <- ScaleData(object = obj, vars.to.regress = c("nCount_RNA", "percent.mito"))
 ```
 
 #### PC analysis
 ```{r rna-pca, eval = is_seurat}
-# Run PCA
-obj <- RunPCA(obj, verbose = FALSE)
-# Examine and visualize PCA results a few different ways
-print(obj[["pca"]], dims = 1:5, nfeatures = 5)
-print(VizDimLoadings(obj, dims = 1:2, reduction = "pca"))
-DimHeatmap(obj, dims = 1:9, cells = 500, balanced = TRUE)
-
-# elbowplot to show the percentage of variance explained by each PCA
-ElbowPlot(obj, ndims = 30)
+    # Run PCA
+    obj <- RunPCA(obj, verbose = FALSE)
+    # Examine and visualize PCA results a few different ways
+    print(obj[["pca"]], dims = 1:5, nfeatures = 5)
+    print(VizDimLoadings(obj, dims = 1:2, reduction = "pca"))
+    DimHeatmap(obj, dims = 1:9, cells = 500, balanced = TRUE)
+    
+    # elbowplot to show the percentage of variance explained by each PCA
+    ElbowPlot(obj, ndims = 30)
 ```
 
 #### Clustering, TSNE, and UMAP analysis
 ```{r rna-cluster, eval = is_seurat}
-obj <- FindNeighbors(obj, dims = 1:25)
-obj <- FindClusters(obj, resolution = 0.8, verbose = FALSE)
-obj <- RunTSNE(obj, dims = 1:15, method = "FIt-SNE")
-obj <- RunUMAP(obj, dims = 1:15)
+    obj <- FindNeighbors(obj, dims = 1:25)
+    obj <- FindClusters(obj, resolution = 0.8, verbose = FALSE)
+    obj <- RunTSNE(obj, dims = 1:15, method = "FIt-SNE")
+    obj <- RunUMAP(obj, dims = 1:15)
 ```
 
 #### Visualization
-```{r rna-dim, eval = is_seurat}
-# Find the markers that define each cluster, and use these to annotate the clusters, we use
-# max.cells.per.ident to speed up the process, and report only the positive ones
-obj_markers <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, max.cells.per.ident = 100)
-
-print(DimPlot(obj, label = TRUE) + NoLegend())
-
-# heatmap on top10 markers
-top10 <- obj_markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
-print(DoHeatmap(obj, features = top10$gene) + NoLegend() + ggtitle("top10 markers") + theme(axis.text=element_text(size = 4)))
-
-topn_gene <- obj_markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC) %>%
-  mutate_if(is.numeric, round, 3) %>%
-  select(gene, cluster, avg_logFC, pct.1, pct.2, p_val, p_val_adj)
+```{r rna-dim, eval = is_seurat}    
+    # Find the markers that define each cluster, and use these to annotate the clusters, we use
+    # max.cells.per.ident to speed up the process, and report only the positive ones
+    obj_markers <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, max.cells.per.ident = 100)
+    
+    print(DimPlot(obj, label = TRUE) + NoLegend())
+    
+    # heatmap on top10 markers 
+    top10 <- obj_markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
+    print(DoHeatmap(obj, features = top10$gene) + NoLegend() + ggtitle("top10 markers") + theme(axis.text=element_text(size = 4)))
+    
+    topn_gene <- obj_markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC) %>%
+                                 mutate_if(is.numeric, round, 3) %>%
+                                 select(gene, cluster, avg_logFC, pct.1, pct.2, p_val, p_val_adj)
 ```
 
-##### top10 markers {.tabset}
+##### top10 markers {.tabset} 
 ```{r,  eval = is_seurat, results = 'asis'}
 for (i in 1:length(unique(obj_markers$cluster))) {
   j = i - 1
@@ -127,68 +145,69 @@ for (i in 1:length(unique(obj_markers$cluster))) {
 ### ADT
 #### Normalization and scaling
 ```{r adt-norm, eval = is_seurat}
-obj <- NormalizeData(obj, assay = "ADT", normalization.method = "CLR")
-obj <- ScaleData(obj, assay = "ADT")
+    obj <- NormalizeData(obj, assay = "ADT", normalization.method = "CLR")
+    obj <- ScaleData(obj, assay = "ADT")
 ```
 
 #### Visualization on RNA clusters
 ##### Ridge plot
 ```{r adt-rna, eval = is_seurat}
-len <- length(rownames(obj@assays$ADT))
-j <- 1
-
-for (i in seq(from = 2, to = len, by = 2)){
-  print(RidgePlot(obj, features = rownames(obj@assays$ADT)[j:i], assay="ADT", same.y.lims = TRUE, log = TRUE,  ncol = 2))
-  j <- j + 2
-}
-
-rm(len, j, i)
+    len <- length(rownames(obj@assays$ADT))
+    j <- 1
+    
+    for (i in seq(from = 2, to = len, by = 2)){
+        print(RidgePlot(obj, features = rownames(obj@assays$ADT)[j:i], assay="ADT", same.y.lims = TRUE, log = TRUE,  ncol = 2))
+        j <- j + 2
+    }
+    
+    rm(len, j, i)
 ```
 
 ##### Heatmap
 ```{r adt-de, eval = is_seurat}
-# Downsample the clusters to a maximum of 300 cells each (makes the heatmap easier to see for
-# small clusters)
-obj_small <- subset(obj, downsample = 300)
-
-# Find protein markers for all clusters, and draw a heatmap
-adt_markers <- FindAllMarkers(obj_small, assay = "ADT", only.pos = TRUE)
-
-DoHeatmap(obj_small, features = rownames(obj@assays$ADT), assay = "ADT", angle = 90) + NoLegend() + ggtitle("ADT on RNA, all")
-DoHeatmap(obj_small, features = unique(adt_markers$gene), assay = "ADT", angle = 90) + NoLegend() + ggtitle("ADT on RNA, DE markers")
+    # Downsample the clusters to a maximum of 300 cells each (makes the heatmap easier to see for
+    # small clusters)
+    obj_small <- subset(obj, downsample = 300)
+    
+    # Find protein markers for all clusters, and draw a heatmap
+    adt_markers <- FindAllMarkers(obj_small, assay = "ADT", only.pos = TRUE)
+    
+    DoHeatmap(obj_small, features = rownames(obj@assays$ADT), assay = "ADT", angle = 90) + NoLegend() + ggtitle("ADT on RNA, all")
+    DoHeatmap(obj_small, features = unique(adt_markers$gene), assay = "ADT", angle = 90) + NoLegend() + ggtitle("ADT on RNA, DE markers")
 ```
 
 #### Visualization on ADT clusters
 ```{r adt-adt, eval = is_seurat}
-DefaultAssay(obj) <- "ADT"
-obj <- RunPCA(obj, features = rownames(obj), reduction.name = "pca_adt", reduction.key = "pca_adt_",
-              verbose = FALSE)
-# DimPlot(obj, reduction = "pca_adt") + ggtitle("ADT on ADT, all")
-
-adt.data <- GetAssayData(obj, slot = "data")
-adt.dist <- dist(t(adt.data))
-
-# stash RNA cluster IDs for later
-obj[["rnaClusterID"]] <- Idents(obj)
-
-# rerun tSNE using our distance matrix defined only on ADT (protein) levels.
-obj[["tsne_adt"]] <- RunTSNE(adt.dist, assay = "ADT", reduction.key = "adtTSNE_")
-obj[["umap_adt"]] <- RunUMAP(adt.dist, assay = "ADT", reduction.key = "adtUMAP_")
-obj[["adt_snn"]] <- FindNeighbors(adt.dist)$snn
-obj <- FindClusters(obj, resolution = 0.2, graph.name = "adt_snn")
-
-tsne_rnaClusters <- DimPlot(obj, reduction = "tsne_adt", group.by = "rnaClusterID") + NoLegend()
-tsne_rnaClusters <- tsne_rnaClusters + ggtitle("ADT on RNA") + theme(plot.title = element_text(hjust = 0.5))
-tsne_rnaClusters <- LabelClusters(plot = tsne_rnaClusters, id = "rnaClusterID", size = 4)
-
-tsne_adtClusters <- DimPlot(obj, reduction = "tsne_adt", pt.size = 0.5) + NoLegend()
-tsne_adtClusters <- tsne_adtClusters + ggtitle("ADT on ADT") + theme(plot.title = element_text(hjust = 0.5))
-tsne_adtClusters <- LabelClusters(plot = tsne_adtClusters, id = "ident", size = 4)
-
-CombinePlots(plots = list(tsne_rnaClusters, tsne_adtClusters), ncol = 2)
+    DefaultAssay(obj) <- "ADT"
+    obj <- RunPCA(obj, features = rownames(obj), reduction.name = "pca_adt", reduction.key = "pca_adt_", 
+                  verbose = FALSE)
+    # DimPlot(obj, reduction = "pca_adt") + ggtitle("ADT on ADT, all")
+    
+    adt.data <- GetAssayData(obj, slot = "data")
+    adt.dist <- dist(t(adt.data))
+    
+    # stash RNA cluster IDs for later
+    obj[["rnaClusterID"]] <- Idents(obj)
+    
+    # rerun tSNE using our distance matrix defined only on ADT (protein) levels.
+    obj[["tsne_adt"]] <- RunTSNE(adt.dist, assay = "ADT", reduction.key = "adtTSNE_")
+    obj[["umap_adt"]] <- RunUMAP(adt.dist, assay = "ADT", reduction.key = "adtUMAP_")
+    obj[["adt_snn"]] <- FindNeighbors(adt.dist)$snn
+    obj <- FindClusters(obj, resolution = 0.2, graph.name = "adt_snn")
+    
+    tsne_rnaClusters <- DimPlot(obj, reduction = "tsne_adt", group.by = "rnaClusterID") + NoLegend()
+    tsne_rnaClusters <- tsne_rnaClusters + ggtitle("ADT on RNA") + theme(plot.title = element_text(hjust = 0.5))
+    tsne_rnaClusters <- LabelClusters(plot = tsne_rnaClusters, id = "rnaClusterID", size = 4)
+    
+    tsne_adtClusters <- DimPlot(obj, reduction = "tsne_adt", pt.size = 0.5) + NoLegend()
+    tsne_adtClusters <- tsne_adtClusters + ggtitle("ADT on ADT") + theme(plot.title = element_text(hjust = 0.5))
+    tsne_adtClusters <- LabelClusters(plot = tsne_adtClusters, id = "ident", size = 4)
+    
+    CombinePlots(plots = list(tsne_rnaClusters, tsne_adtClusters), ncol = 2)
 ```
 
 ### Save the object
 ```{r, echo = FALSE, message = FALSE}
-save(obj, file = params$obj_out)
+   save(obj, file = paste(out_path, params$obj_out, sep = "/"))
 ```
+

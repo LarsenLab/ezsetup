@@ -1,21 +1,21 @@
 ---
 title: "Remove contaminated cells"
 output:
-  html_document:
-  toc: yes
-toc_depth: 5
-toc_float: yes
-number_sections: false
+    html_document:
+      toc: yes
+      toc_depth: 5
+      toc_float: yes
+      number_sections: false
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  tiny_clus_1: 99
-  tiny_clus_2: 99
-  prt_name: "CD4"
-  cell_pct_cut: 0.01
-  obj_in: "Object_Name_Of_1stQC"
-  obj_out: "Object_Name_Of_2ndQC"
+    tiny_clus_1: 99
+    tiny_clus_2: 99
+    prt_name: "CD4"
+    cell_pct_cut: 0.01
+    obj_in: "Object_Name_Of_1stQC"
+    obj_out: "Object_Name_Of_2ndQC"
 ---
-
+ 
 ```{r, include = FALSE}
 library(DropletUtils)
 library(Seurat)
@@ -24,728 +24,92 @@ library(outliers)
 library(tidyverse)
 library(knitr)
 library(kableExtra)
+
+# set out_path for output object
+ifelse(!dir.exists(paste(getwd(), "data/proc", sep = "/")), 
+       dir.create(paste(getwd(), "data/proc", sep = "/"), showWarnings = FALSE, recursive = TRUE), FALSE)
+out_path <- paste(getwd(), "data/proc", sep = "/")
+
 ```
 
 ```{r load, echo = FALSE}
-tmp = load(params$obj_in)
-# Get the object by its name
-obj = get(tmp)
-rm(tmp)
-num_c_ori <- length(colnames(obj))
+    # go to data/proc folder if only data name for params$obj_in; otherwise, load the file with the entire path
+    if (file.exists(paste(paste(getwd(), "data/proc", sep = "/"), params$obj_in, sep = "/"))){
+        tmp = load(paste(paste(getwd(), "data/proc", sep = "/"), params$obj_in, sep = "/"))
+    } else if (file.exists(params$obj_in)) {
+        tmp = load(params$obj_in)
+    } else {
+        warning("Object does not exist")
+    }
+    # Get the object by its name
+    obj = get(tmp)
+    rm(tmp)
+    num_c_ori <- length(colnames(obj))
 ```
 
 ### Cell removal
 #### Tinly cluster(s)
 ```{r clus, , echo = FALSE}
-if (params$tiny_clus_1 != 99 & params$tiny_clus_2 != 99) {
-  tiny_clus <- c(params$tiny_clus_1, params$tiny_clus_2)
-} else if (params$tiny_clus_1 != 99 & params$tiny_clus_2 == 99) {
-  tiny_clus <- params$tiny_clus_1
-} else if (params$tiny_clus_1 == 99 & params$tiny_clus_2 != 99) {
-  tiny_clus <- params$tiny_clus_2
-} else {
-  tiny_clus <- 99
-}
+    if (params$tiny_clus_1 != 99 & params$tiny_clus_2 != 99) {
+        tiny_clus <- c(params$tiny_clus_1, params$tiny_clus_2)
+    } else if (params$tiny_clus_1 != 99 & params$tiny_clus_2 == 99) {
+        tiny_clus <- params$tiny_clus_1
+    } else if (params$tiny_clus_1 == 99 & params$tiny_clus_2 != 99) {
+        tiny_clus <- params$tiny_clus_2
+    } else {
+        tiny_clus <- 99
+    }
 
-#* start of tiny cluster *#
-tiny_clus_cell <- obj@meta.data %>% rownames_to_column() %>% filter(seurat_clusters %in% tiny_clus)  %>% mutate(cellname = rowname) %>% select(cellname)
-tiny_clus_cell <- tiny_clus_cell$cellname
-print(paste(paste("there are", length(tiny_clus_cell), sep = " "), "cell removed from tiny cluster(s).", sep = " "))
+    #* start of tiny cluster *#
+    tiny_clus_cell <- obj@meta.data %>% rownames_to_column() %>% filter(seurat_clusters %in% tiny_clus)  %>% mutate(cellname = rowname) %>% select(cellname)
+    tiny_clus_cell <- tiny_clus_cell$cellname
+    print(paste(paste("there are", length(tiny_clus_cell), sep = " "), "cell removed from tiny cluster(s).", sep = " "))
 
-non_tiny <- setdiff(colnames(obj), tiny_clus_cell)
-obj = subset(obj, cells = non_tiny)
-#* end of tiny cluster *#
+    non_tiny <- setdiff(colnames(obj), tiny_clus_cell)
+    obj = subset(obj, cells = non_tiny)
+    #* end of tiny cluster *#
 ```
 
 #### Protein specific
 ```{r prt, , echo = FALSE}
-if (params$prt_name %in% rownames(obj@assays$ADT)) {
-  #* start of protein specific cell *#
-  prt <- as.matrix(obj@assays$ADT@scale.data)
-  prt <- prt[rownames(prt) == params$prt_name, ]
-  non_prt <- names(prt)[prt < as.numeric(quantile(prt, params$cell_pct_cut))]
+    if (params$prt_name %in% rownames(obj@assays$ADT)) {
+        #* start of protein specific cell *#
+        prt <- as.matrix(obj@assays$ADT@scale.data)
+        prt <- prt[rownames(prt) == params$prt_name, ]
+        non_prt <- names(prt)[prt < as.numeric(quantile(prt, params$cell_pct_cut))]
 
-  print(paste(paste(paste("there are", length(non_prt), sep=" "), params$prt_name, sep = " "), " cells are removed.", sep = ""))
+        print(paste(paste(paste("there are", length(non_prt), sep=" "), params$prt_name, sep = " "), " cells are removed.", sep = ""))
 
-  yes_prt <- setdiff(colnames(obj), non_prt)
-  obj = subset(obj, cells = yes_prt)
-  #* end of protein specific cell *#
-}
+        yes_prt <- setdiff(colnames(obj), non_prt)
+        obj = subset(obj, cells = yes_prt)
+        #* end of protein specific cell *#
+    }
 ```
 
 ### Summary table
 ```{r sum, , echo = FALSE}
-#* start of summary table *#
-num_c_final <- length(colnames(obj))
-if (params$prt_name %in% rownames(obj@assays$ADT)) {
-  dat_comp <- data.frame(num_of_cells = c(num_c_ori,length(tiny_clus_cell), length(non_prt), num_c_final ))
-  rownames(dat_comp) <- c("num_cell_qc1", "num_cell_rm_clus", "num_cell_rm_prt", "num_cell_retained")
-} else {
-  dat_comp <- data.frame(num_of_cells = c(num_c_ori,length(tiny_clus_cell), num_c_final ))
-  rownames(dat_comp) <- c("num_cell_qc1", "num_cell_rm_clus", "num_cell_retained")
-}
+    #* start of summary table *#
+    num_c_final <- length(colnames(obj))
+    if (params$prt_name %in% rownames(obj@assays$ADT)) {
+        dat_comp <- data.frame(num_of_cells = c(num_c_ori,length(tiny_clus_cell), length(non_prt), num_c_final ))
+        rownames(dat_comp) <- c("num_cell_qc1", "num_cell_rm_clus", "num_cell_rm_prt", "num_cell_retained")
+    } else {
+        dat_comp <- data.frame(num_of_cells = c(num_c_ori,length(tiny_clus_cell), num_c_final ))
+        rownames(dat_comp) <- c("num_cell_qc1", "num_cell_rm_clus", "num_cell_retained")
+    }
 
-kable(dat_comp, caption = "summary of cell numbers") %>% kable_styling(bootstrap_options = "striped", full_width = F)
-#* end of summary table *#
+    kable(dat_comp, caption = "summary of cell numbers") %>% kable_styling(bootstrap_options = "striped", full_width = F)
+    #* end of summary table *#
 ```
-
 
 ```{r, echo = FALSE}
-cell_keep <- colnames(obj)
-feature_keep <- rownames(obj)
-obj_to_save <- list(cell_keep = cell_keep, feature_keep=feature_keep)
-if (params$prt_name %in% rownames(obj@assays$ADT)) {
-  rm(cell_keep, feature_keep, non_prt, non_tiny, num_c_ori, num_c_final, obj, prt, tiny_clus, tiny_clus_cell, yes_prt, dat_comp)
-} else {
-  rm(cell_keep, feature_keep, non_tiny, num_c_ori, num_c_final, obj, tiny_clus, tiny_clus_cell, dat_comp)
-}
-save(obj_to_save, file = params$obj_out)
+    cell_keep <- colnames(obj)
+    feature_keep <- rownames(obj)
+    obj_to_save <- list(cell_keep = cell_keep, feature_keep=feature_keep)
+    if (params$prt_name %in% rownames(obj@assays$ADT)) {
+        rm(cell_keep, feature_keep, non_prt, non_tiny, num_c_ori, num_c_final, obj, prt, tiny_clus, tiny_clus_cell, yes_prt, dat_comp)
+    } else {
+        rm(cell_keep, feature_keep, non_tiny, num_c_ori, num_c_final, obj, tiny_clus, tiny_clus_cell, dat_comp)
+    }
+    save(obj_to_save, file = paste(out_path, params$obj_out, sep = "/"))
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
