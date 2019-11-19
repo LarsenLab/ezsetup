@@ -6,7 +6,6 @@ development of ezsetup package
 <br> A package has to be error and warning free, it's ok if there are notes remaining after checking.
 <br> To run a check : click Build tab on the Enviroment HIstory panel > click Check . 
 
-
 2. installation : **need to turn the repo to public**
 <br> library(devtools)
 <br> **install_github("LarsenLab/ezsetup")**
@@ -16,9 +15,7 @@ development of ezsetup package
 <br> The simpliest way to update this package is reinstall it.
 
 4. test run : 
-library(ezsetup)
-setRproj("~/Documents/NameYourFolder", "general")
-
 <br> **library(ezsetup)**
 <br> **setRproj("~/Documents/SC_project", "singlecell")**
+
 
