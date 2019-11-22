@@ -46,7 +46,7 @@ knitr::opts_chunk$set(
 
 ```{bash dir structure, results = 'hide' }
 html files are excluded from the tree
-tree  -I '*.html|*.css' -H '' --nolinks -o fd_str_tree.html
+tree  -I '*.css' -H '' --nolinks -o fd_str_tree.html
 ```
 
 ```{r}
