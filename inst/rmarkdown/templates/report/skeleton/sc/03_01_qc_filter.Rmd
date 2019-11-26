@@ -189,7 +189,6 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
     tmp <- topn_gene[topn_gene$cluster == j, ]
     print(kable(tmp, caption = "table of top10 markers") %>% kable_styling(bootstrap_options = "striped", full_width = F))
   }
-is_seurat = FALSE
 ```
 
 ### ADT
