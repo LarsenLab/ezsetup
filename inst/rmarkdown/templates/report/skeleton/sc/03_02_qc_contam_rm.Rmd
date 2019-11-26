@@ -50,7 +50,7 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
 
 ### Cell removal
 #### Tinly cluster(s)
-```{r clus, , echo = FALSE}
+```{r clus, echo = FALSE}
     if (params$tiny_clus_1 != 99 & params$tiny_clus_2 != 99) {
         tiny_clus <- c(params$tiny_clus_1, params$tiny_clus_2)
     } else if (params$tiny_clus_1 != 99 & params$tiny_clus_2 == 99) {
@@ -72,7 +72,7 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
 ```
 
 #### Protein specific
-```{r prt, , echo = FALSE}
+```{r prt, echo = FALSE}
     if (params$prt_name %in% rownames(obj@assays$ADT)) {
         #* start of protein specific cell *#
         prt <- as.matrix(obj@assays$ADT@scale.data)
@@ -88,7 +88,7 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
 ```
 
 ### Summary table
-```{r sum, , echo = FALSE}
+```{r sum, echo = FALSE}
     #* start of summary table *#
     num_c_final <- length(colnames(obj))
     if (params$prt_name %in% rownames(obj@assays$ADT)) {
