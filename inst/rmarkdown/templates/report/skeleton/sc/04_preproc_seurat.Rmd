@@ -6,10 +6,10 @@ output:
       toc_depth: 5
       toc_float: yes
       number_sections: false
+      code_folding: hide
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-    obj_in: "Raw_Object"
-    obj_in_type: "seurat"
+    obj_in: "Raw_Seurat_Object"
     obj_in_cell_feature: "List_of_Cell_Feature_to_Keep"
     obj_out: "Object_Name_to_Save"
 ---
@@ -24,10 +24,7 @@ library(ggplot2)
 library(knitr)
 library(kableExtra)
 
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
-
-obj_in_type <- tolower(params$obj_in_type)
-is_seurat <- ifelse(obj_in_type == "seurat", TRUE, FALSE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 
 ifelse(!dir.exists(paste(getwd(), "data/proc", sep = "/")), 
        dir.create(paste(getwd(), "data/proc", sep = "/"), showWarnings = FALSE, recursive = TRUE), FALSE)
@@ -70,13 +67,13 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
 
 ### RNA
 #### Normalization
-```{r rna-norm, eval = is_seurat}
+```{r rna-norm}
     # standard log-normalization
     obj <- NormalizeData(obj)
 ```
 
 #### Variable gene selection
-```{r rna-hvg, eval = is_seurat}
+```{r rna-hvg}
     obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 2000)
     
     # Identify the 10 most highly variable genes
@@ -89,13 +86,13 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
 ```
 
 #### Data scaling
-```{r rna-scale, eval = is_seurat}
+```{r rna-scale}
     # standard scaling (no regression), scale on 2000 variables features
     obj <- ScaleData(object = obj, vars.to.regress = c("nCount_RNA", "percent.mito"))
 ```
 
 #### PC analysis
-```{r rna-pca, eval = is_seurat}
+```{r rna-pca}
     # Run PCA
     obj <- RunPCA(obj, verbose = FALSE)
     # Examine and visualize PCA results a few different ways
@@ -108,7 +105,7 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
 ```
 
 #### Clustering, TSNE, and UMAP analysis
-```{r rna-cluster, eval = is_seurat}
+```{r rna-cluster}
     obj <- FindNeighbors(obj, dims = 1:25)
     obj <- FindClusters(obj, resolution = 0.8, verbose = FALSE)
     obj <- RunTSNE(obj, dims = 1:15, method = "FIt-SNE")
@@ -116,7 +113,7 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
 ```
 
 #### Visualization
-```{r rna-dim, eval = is_seurat}    
+```{r rna-dim}    
     # Find the markers that define each cluster, and use these to annotate the clusters, we use
     # max.cells.per.ident to speed up the process, and report only the positive ones
     obj_markers <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, max.cells.per.ident = 100)
@@ -133,10 +130,10 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
 ```
 
 ##### top10 markers {.tabset} 
-```{r,  eval = is_seurat, results = 'asis'}
+```{r, results = 'asis'}
 for (i in 1:length(unique(obj_markers$cluster))) {
   j = i - 1
-  cat("###### ", "cluster", i, "\n\n") # 注意这井号的数量要比section title的井号数量多一个，要不然tabset就乱了
+  cat("###### ", "cluster", i, "\n\n")
   tmp <- topn_gene[topn_gene$cluster == j, ]
   print(kable(tmp, caption = "table of top10 markers (positive, avg_logFC 0.25)") %>% kable_styling(bootstrap_options = "striped", full_width = F))
 }
@@ -144,19 +141,19 @@ for (i in 1:length(unique(obj_markers$cluster))) {
 
 ### ADT
 #### Normalization and scaling
-```{r adt-norm, eval = is_seurat}
+```{r adt-norm}
     obj <- NormalizeData(obj, assay = "ADT", normalization.method = "CLR")
     obj <- ScaleData(obj, assay = "ADT")
 ```
 
 #### Visualization on RNA clusters
 ##### Ridge plot
-```{r adt-rna, eval = is_seurat}
+```{r adt-rna}
     len <- length(rownames(obj@assays$ADT))
     j <- 1
     
     for (i in seq(from = 2, to = len, by = 2)){
-        print(RidgePlot(obj, features = rownames(obj@assays$ADT)[j:i], assay="ADT", same.y.lims = TRUE, log = TRUE,  ncol = 2))
+        print(RidgePlot(obj, features = rownames(obj@assays$ADT)[j:i], assay = "ADT", same.y.lims = TRUE, log = TRUE,  ncol = 2))
         j <- j + 2
     }
     
@@ -164,7 +161,7 @@ for (i in 1:length(unique(obj_markers$cluster))) {
 ```
 
 ##### Heatmap
-```{r adt-de, eval = is_seurat}
+```{r adt-de}
     # Downsample the clusters to a maximum of 300 cells each (makes the heatmap easier to see for
     # small clusters)
     obj_small <- subset(obj, downsample = 300)
@@ -177,7 +174,8 @@ for (i in 1:length(unique(obj_markers$cluster))) {
 ```
 
 #### Visualization on ADT clusters
-```{r adt-adt, eval = is_seurat}
+##### Dim plots
+```{r adt-adt}
     DefaultAssay(obj) <- "ADT"
     obj <- RunPCA(obj, features = rownames(obj), reduction.name = "pca_adt", reduction.key = "pca_adt_", 
                   verbose = FALSE)

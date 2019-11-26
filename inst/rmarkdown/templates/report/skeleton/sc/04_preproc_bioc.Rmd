@@ -1,0 +1,865 @@
+---
+title: "Pre-processing with bioconductor packages"
+output:
+    html_document:
+      toc: yes
+      toc_depth: 5
+      toc_float: yes
+      number_sections: false
+      code_folding: hide
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+params:
+    obj_in: "Raw_SCE_Object"
+    obj_in_cell_feature: "List_of_Cell_Feature_to_Keep"
+    obj_out: "Object_Name_to_Save"
+---
+ 
+```{r, include = FALSE}
+library(SingleCellExperiment)
+library(Seurat)
+library(scater)
+library(scran)
+library(uwot)
+library(umap)
+
+library(DropletUtils)
+library(outliers)
+
+library(tidyverse)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+ifelse(!dir.exists(paste(getwd(), "data/proc", sep = "/")), 
+       dir.create(paste(getwd(), "data/proc", sep = "/"), showWarnings = FALSE, recursive = TRUE), FALSE)
+out_path <- paste(getwd(), "data/proc", sep = "/")
+```
+
+### Load object
+```{r load, include = FALSE}
+  # load raw data
+  # go to data/raw folder if only data name for params$obj_in; otherwise, load the file with the entire path
+  if (file.exists(paste(paste(getwd(), "data/proc", sep = "/"), params$obj_in, sep = "/"))){
+    tmp = load(paste(paste(getwd(), "data/proc", sep = "/"), params$obj_in, sep = "/"))
+  } else if (file.exists(params$obj_in)) {
+    tmp = load(params$obj_in)
+  } else {
+    warning("Raw object does not exist")
+  }
+  obj_in = get(tmp)
+  rm(tmp)
+  
+  # load QCed data and pull out cell and feature names
+  # go to data/proc folder if only data name for params$obj_in_cell_feature; otherwise, load the file with the entire path
+  if (file.exists(paste(paste(getwd(), "data/proc", sep = "/"), params$obj_in_cell_feature, sep = "/"))){
+    tmp = load(paste(paste(getwd(), "data/proc", sep = "/"), params$obj_in_cell_feature, sep = "/"))
+  } else if (file.exists(params$obj_in_cell_feature)) {
+    tmp = load(params$obj_in_cell_feature)
+  } else {
+    warning("List ovbject does not exist")
+  }
+  obj_in_cell_feature = get(tmp)
+  rm(tmp)
+  
+  # filter raw data with QCed data #
+  # rename rownames/colnames, find index of surface protein
+  rownames(obj_in) <- rowData(obj_in)[, "Symbol"]
+  indx <- which(grepl("_TotalSeqC", rownames(obj_in),fixed=TRUE))
+  rownames(obj_in) <- gsub(pattern = "_TotalSeqC", replacement = "", rownames(obj_in))
+  colnames(obj_in) <- gsub(pattern = "-1", replacement = "", colData(obj_in)$Barcode)
+  
+  # seprate rna and adt data
+  rna <- obj_in[-indx, obj_in_cell_feature$cell_keep]
+  rna  <- rna[which(rownames(rna) %in% obj_in_cell_feature$feature_keep), ]
+  adt <- obj_in[indx, obj_in_cell_feature$cell_keep]
+  
+  obj <- obj_in
+  rm(obj_in, obj_in_cell_feature, indx)
+```
+
+### RNA
+#### Normalization
+```{r rna-norm, include = FALSE}
+  sizeFactors(rna) <- librarySizeFactors(rna)
+  summary(sizeFactors(rna))
+  rna <- scater::normalize(rna)
+```
+
+#### Feature selection
+```{r rna-hvg, include = FALSE}
+    fit <- trendVar(rna, use.spikes = FALSE) 
+    #plot(fit$mean, fit$var, main = "mean-variance trend")
+    #curve(fit$trend(x), col = 'red', lwd = 2, add = TRUE)
+    # alternation:  p-value/FDR
+    dec <- decomposeVar(rna, fit)
+    dec <- dec[order(dec$bio, decreasing = TRUE), ]
+    hvg_genes <- rownames(dec)[dec$bio > 0]
+```
+
+#### Dimensionality Reduction
+```{r rna-dim, include = FALSE}
+  # This method saves the percent variance explained per component as an attribute
+  rna <- scater::runPCA(rna, ncomponents = 20, feature_set = hvg_genes) # run time : 12.5 mins
+  ## access the attribute where percentVar is saved in reducedDim
+  pct_var_explained <- attr(reducedDim(rna, 'PCA'), 'percentVar')
+  # elbow plot
+  plot(pct_var_explained) 
+  # based on  elbow plot above, use the top 6 components of our PCA result to perform UMAP on cell level
+  rna <- scater::runUMAP(rna, use_dimred = 'PCA', n_dimred = 20) 
+```
+
+#### clustering
+```{r rna-clus, include = FALSE}
+  set.seed(1234) # to make results reproducible
+  snng <- buildSNNGraph(rna, k = 5, d = 20, assay.type = "logcounts") # takes 30 mins to run
+  snng_clusters <- igraph::cluster_walktrap(snng)
+  table(snng_clusters$membership)
+  colData(rna)$clusters <- as.factor(snng_clusters$membership)
+  colData(rna)$clusters 
+  
+  print(plotReducedDim(rna, use_dimred = "UMAP", colour_by = "clusters"))
+  
+  sample_cluster = colData(rna)[, c("Barcode","clusters")]
+```
+
+#### Differential Expression
+```{r}
+  markers <- findMarkers(rna, clusters = colData(rna)$clusters,
+                       subset.row = hvg_genes[1:250],
+                       lfc = 1.5, direction = 'up', log.p = TRUE, 
+                       BPPARAM = BiocParallel::MulticoreParam())
+```
+
+#### topN markers {.tabset} 
+```{r, results = 'asis'}
+  for (i in 1:length(markers@listData)) {
+    cat("##### ", "cluster", i, "\n\n") 
+      tmp <- as.data.frame(markers@listData[[i]]) 
+      tmp <- tmp[tmp$Top < 10, ]
+      tmp$gene <- rownames(tmp)
+      tmp <- tmp[, colnames(tmp) %in% c("Top", "gene")]
+      print(kable(tmp) %>% kable_styling(bootstrap_options = "striped", full_width = F))
+      cat("\n\n")
+  }
+```
+
+### ADT
+#### Normalization, 
+```{r adt-norm, include = FALSE}
+ quick_clusters_adt <- quickCluster(adt, method = "hclust", min.size = 300, assay.type = "counts", use.ranks = TRUE)
+ adt <- computeSumFactors(adt, clusters = quick_clusters_adt)
+ adt <- scater::normalize(adt)
+ 
+ # assign gene clusters to protein
+ adt <- scater::runPCA(adt, ncomponents = 10) 
+ adt <- scater::runUMAP(adt, use_dimred = 'PCA', n_dimred = 10) 
+  
+ set.seed(1234) # to make results reproducible
+ snng_adt <- buildSNNGraph(adt, k = 5, d = 20, assay.type = "logcounts") # takes 30 mins to run
+ snng_adt_clusters <- igraph::cluster_walktrap(snng_adt)
+ colData(adt)$clusters_prt <- as.factor(snng_adt_clusters$membership)
+ colData(adt)$clusters_rna <- as.factor(snng_clusters$membership)
+```
+
+#### Visualization
+##### Violin: ADT on RNA clusters {.tabset} 
+```{r adtonrna, results = 'asis'}
+  for (i in 1:length(rownames(adt))) {
+    cat("###### ", rownames(adt)[i], "\n\n") 
+    print(plotExpression(adt, features = rownames(adt)[i], x = 'clusters_rna', colour_by = "clusters_rna"))
+    cat("\n\n")
+  }
+```
+
+##### Violin: ADT on ADT clusters {.tabset} 
+```{r adtonadt, results = 'asis'}
+  for (i in 1:length(rownames(adt))) {
+    cat("###### ", rownames(adt)[i], "\n\n") 
+    print(plotExpression(adt, features = rownames(adt)[i], x = 'clusters_prt', colour_by = "clusters_prt"))
+    cat("\n\n")
+  }
+```
+
+##### Heatmap: ADT on RNA clusters
+```{r heatmap1, result = 'asis', fig.width = 10}
+  adt_s <- as.Seurat(adt, counts = "counts", data = "logcounts", assay = "adt")
+  adt_s <- ScaleData(adt_s, assay = "adt")
+  DoHeatmap(adt_s,  features = rownames(adt_s), assay = "adt", group.by = "clusters_rna") + theme(legend.position = "bottom") + ggtitle("ADT on RNA")
+  
+  # tmp <- as.matrix(logcounts(adt)) 
+  # adt_s <- SetAssayData(
+  #     object = adt_s,
+  #     slot = "scale.data",
+  #     new.data = tmp,
+  #     assay = "adt"
+  # )
+  # DoHeatmap(adt_s,  features = rownames(adt_s), assay = "adt", group.by = "clusters_rna",
+  #           disp.min = min(tmp), disp.max = max(tmp)) + theme(legend.position = "bottom") + ggtitle("ADT on RNA")
+  # DoHeatmap(adt_s,  features = rownames(adt_s), assay = "adt", group.by = "clusters_prt",
+  #           disp.min = min(tmp), disp.max = max(tmp)) + theme(legend.position = "bottom") + ggtitle("ADT on ADT")
+  # rm(tmp)
+```
+
+##### Heatmap: ADT on ADT clusters
+```{r heatmap2, result = 'asis', fig.width = 10}
+  DoHeatmap(adt_s,  features = rownames(adt_s), assay = "adt", group.by = "clusters_prt") + theme(legend.position = "bottom") + ggtitle("ADT on ADT")
+```
+
+### Save the object
+```{r, echo = FALSE, message = FALSE}
+  obj_to_save <- list(rna = rna, adt = adt)
+  save(obj_to_save, file = paste(out_path, params$obj_out, sep = "/"))
+```
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

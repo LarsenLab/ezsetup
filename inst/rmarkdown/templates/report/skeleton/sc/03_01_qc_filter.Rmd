@@ -8,6 +8,7 @@ output:
     toc_float: yes
     number_sections: false
     theme: flatly
+    code_folding: hide
 params:
     obj_in: "Object_Name"
     cut_mt_se: 0.95
@@ -24,7 +25,7 @@ library(tidyverse)
 library(knitr)
 library(kableExtra)
 
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 ```
 
 ```{r mkdir, include = FALSE}
@@ -188,6 +189,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
     tmp <- topn_gene[topn_gene$cluster == j, ]
     print(kable(tmp, caption = "table of top10 markers") %>% kable_styling(bootstrap_options = "striped", full_width = F))
   }
+is_seurat = FALSE
 ```
 
 ### ADT
