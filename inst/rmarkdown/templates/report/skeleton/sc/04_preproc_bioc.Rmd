@@ -41,7 +41,7 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
 ```{r load, include = FALSE}
   # load raw data
   # go to data/raw folder if only data name for params$obj_in; otherwise, load the file with the entire path
-  if (file.exists(paste(paste(getwd(), "data/proc", sep = "/"), params$obj_in, sep = "/"))){
+  if (file.exists(paste(paste(getwd(), "data/proc", sep = "/"), params$obj_in, sep = "/"))) {
     tmp = load(paste(paste(getwd(), "data/proc", sep = "/"), params$obj_in, sep = "/"))
   } else if (file.exists(params$obj_in)) {
     tmp = load(params$obj_in)
@@ -53,7 +53,7 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
   
   # load QCed data and pull out cell and feature names
   # go to data/proc folder if only data name for params$obj_in_cell_feature; otherwise, load the file with the entire path
-  if (file.exists(paste(paste(getwd(), "data/proc", sep = "/"), params$obj_in_cell_feature, sep = "/"))){
+  if (file.exists(paste(paste(getwd(), "data/proc", sep = "/"), params$obj_in_cell_feature, sep = "/"))) {
     tmp = load(paste(paste(getwd(), "data/proc", sep = "/"), params$obj_in_cell_feature, sep = "/"))
   } else if (file.exists(params$obj_in_cell_feature)) {
     tmp = load(params$obj_in_cell_feature)
@@ -66,7 +66,7 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
   # filter raw data with QCed data #
   # rename rownames/colnames, find index of surface protein
   rownames(obj_in) <- rowData(obj_in)[, "Symbol"]
-  indx <- which(grepl("_TotalSeqC", rownames(obj_in),fixed=TRUE))
+  indx <- which(grepl("_TotalSeqC", rownames(obj_in),fixed = TRUE))
   rownames(obj_in) <- gsub(pattern = "_TotalSeqC", replacement = "", rownames(obj_in))
   colnames(obj_in) <- gsub(pattern = "-1", replacement = "", colData(obj_in)$Barcode)
   
@@ -90,9 +90,6 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
 #### Feature selection
 ```{r rna-hvg, include = FALSE}
     fit <- trendVar(rna, use.spikes = FALSE) 
-    #plot(fit$mean, fit$var, main = "mean-variance trend")
-    #curve(fit$trend(x), col = 'red', lwd = 2, add = TRUE)
-    # alternation:  p-value/FDR
     dec <- decomposeVar(rna, fit)
     dec <- dec[order(dec$bio, decreasing = TRUE), ]
     hvg_genes <- rownames(dec)[dec$bio > 0]
@@ -101,19 +98,17 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
 #### Dimensionality Reduction
 ```{r rna-dim, include = FALSE}
   # This method saves the percent variance explained per component as an attribute
-  rna <- scater::runPCA(rna, ncomponents = 20, feature_set = hvg_genes) # run time : 12.5 mins
+  rna <- scater::runPCA(rna, ncomponents = 20, feature_set = hvg_genes) 
   ## access the attribute where percentVar is saved in reducedDim
   pct_var_explained <- attr(reducedDim(rna, 'PCA'), 'percentVar')
-  # elbow plot
   plot(pct_var_explained) 
-  # based on  elbow plot above, use the top 6 components of our PCA result to perform UMAP on cell level
   rna <- scater::runUMAP(rna, use_dimred = 'PCA', n_dimred = 20) 
 ```
 
-#### clustering
+#### Clustering
 ```{r rna-clus, include = FALSE}
-  set.seed(1234) # to make results reproducible
-  snng <- buildSNNGraph(rna, k = 5, d = 20, assay.type = "logcounts") # takes 30 mins to run
+  set.seed(1234)
+  snng <- buildSNNGraph(rna, k = 5, d = 20, assay.type = "logcounts")
   snng_clusters <- igraph::cluster_walktrap(snng)
   table(snng_clusters$membership)
   colData(rna)$clusters <- as.factor(snng_clusters$membership)
@@ -125,18 +120,19 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
 ```
 
 #### Differential Expression
-```{r}
-  markers <- findMarkers(rna, clusters = colData(rna)$clusters,
-                       subset.row = hvg_genes[1:250],
+```{r rna_markers}
+  rna_mk <- findMarkers(rna, clusters = colData(rna)$clusters,
+                       #subset.row = hvg_genes[1:250],
+                       subset.row = hvg_genes,
                        lfc = 1.5, direction = 'up', log.p = TRUE, 
                        BPPARAM = BiocParallel::MulticoreParam())
 ```
 
-#### topN markers {.tabset} 
-```{r, results = 'asis'}
-  for (i in 1:length(markers@listData)) {
+#### TopN markers {.tabset} 
+```{r topn_rna, results = 'asis'}
+  for (i in 1:length(rna_mk@listData)) {
     cat("##### ", "cluster", i, "\n\n") 
-      tmp <- as.data.frame(markers@listData[[i]]) 
+      tmp <- as.data.frame(rna_mk@listData[[i]]) 
       tmp <- tmp[tmp$Top < 10, ]
       tmp$gene <- rownames(tmp)
       tmp <- tmp[, colnames(tmp) %in% c("Top", "gene")]
@@ -146,37 +142,44 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
 ```
 
 ### ADT
-#### Normalization, 
-```{r adt-norm, include = FALSE}
+#### Normalization
+```{r adt_norm, include = FALSE}
  quick_clusters_adt <- quickCluster(adt, method = "hclust", min.size = 300, assay.type = "counts", use.ranks = TRUE)
  adt <- computeSumFactors(adt, clusters = quick_clusters_adt)
  adt <- scater::normalize(adt)
- 
- # assign gene clusters to protein
- adt <- scater::runPCA(adt, ncomponents = 10) 
- adt <- scater::runUMAP(adt, use_dimred = 'PCA', n_dimred = 10) 
-  
- set.seed(1234) # to make results reproducible
- snng_adt <- buildSNNGraph(adt, k = 5, d = 20, assay.type = "logcounts") # takes 30 mins to run
+
+ adt <- scater::runPCA(adt, ncomponents = 10)
+ adt <- scater::runUMAP(adt, use_dimred = 'PCA', n_dimred = 10)
+
+ set.seed(1234)
+ snng_adt <- buildSNNGraph(adt, k = 5, d = 20, assay.type = "logcounts")
  snng_adt_clusters <- igraph::cluster_walktrap(snng_adt)
  colData(adt)$clusters_prt <- as.factor(snng_adt_clusters$membership)
  colData(adt)$clusters_rna <- as.factor(snng_clusters$membership)
 ```
 
+<!-- # this chunk can run individually, but can't pass through with render() -->
+<!-- # ```{r adt_marker} -->
+<!-- #  adt_mk <- findMarkers(adt, clusters = colData(adt)$clusters_prt, -->
+<!-- #                        subset.row = rownames(adt), -->
+<!-- #                        lfc = 1.5, direction = 'up', log.p = TRUE, -->
+<!-- #                        BPPARAM = BiocParallel::MulticoreParam()) -->
+<!-- # ``` -->
+
 #### Visualization
-##### Violin: ADT on RNA clusters {.tabset} 
+##### Violin: ADT on RNA clusters {.tabset}
 ```{r adtonrna, results = 'asis'}
   for (i in 1:length(rownames(adt))) {
-    cat("###### ", rownames(adt)[i], "\n\n") 
+    cat("###### ", rownames(adt)[i], "\n\n")
     print(plotExpression(adt, features = rownames(adt)[i], x = 'clusters_rna', colour_by = "clusters_rna"))
     cat("\n\n")
   }
 ```
 
-##### Violin: ADT on ADT clusters {.tabset} 
+##### Violin: ADT on ADT clusters {.tabset}
 ```{r adtonadt, results = 'asis'}
   for (i in 1:length(rownames(adt))) {
-    cat("###### ", rownames(adt)[i], "\n\n") 
+    cat("###### ", rownames(adt)[i], "\n\n")
     print(plotExpression(adt, features = rownames(adt)[i], x = 'clusters_prt', colour_by = "clusters_prt"))
     cat("\n\n")
   }
@@ -187,8 +190,8 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
   adt_s <- as.Seurat(adt, counts = "counts", data = "logcounts", assay = "adt")
   adt_s <- ScaleData(adt_s, assay = "adt")
   DoHeatmap(adt_s,  features = rownames(adt_s), assay = "adt", group.by = "clusters_rna") + theme(legend.position = "bottom") + ggtitle("ADT on RNA")
-  
-  # tmp <- as.matrix(logcounts(adt)) 
+
+  # tmp <- as.matrix(logcounts(adt))
   # adt_s <- SetAssayData(
   #     object = adt_s,
   #     slot = "scale.data",
@@ -209,9 +212,663 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
 
 ### Save the object
 ```{r, echo = FALSE, message = FALSE}
-  obj_to_save <- list(rna = rna, adt = adt)
+  obj_to_save <- list(bioc_rna = rna, bioc_rna_mk = rna_mk, bioc_adt = adt) 
   save(obj_to_save, file = paste(out_path, params$obj_out, sep = "/"))
 ```
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

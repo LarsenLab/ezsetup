@@ -116,22 +116,22 @@ out_path <- paste(getwd(), "data/proc", sep = "/")
 ```{r rna-dim}    
     # Find the markers that define each cluster, and use these to annotate the clusters, we use
     # max.cells.per.ident to speed up the process, and report only the positive ones
-    obj_markers <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, max.cells.per.ident = 100)
+    rna_markers <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, max.cells.per.ident = 100)
     
     print(DimPlot(obj, label = TRUE) + NoLegend())
     
     # heatmap on top10 markers 
-    top10 <- obj_markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
+    top10 <- rna_markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
     print(DoHeatmap(obj, features = top10$gene) + NoLegend() + ggtitle("top10 markers") + theme(axis.text=element_text(size = 4)))
     
-    topn_gene <- obj_markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC) %>%
+    topn_gene <- rna_markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC) %>%
                                  mutate_if(is.numeric, round, 3) %>%
                                  select(gene, cluster, avg_logFC, pct.1, pct.2, p_val, p_val_adj)
 ```
 
 ##### top10 markers {.tabset} 
 ```{r, results = 'asis'}
-for (i in 1:length(unique(obj_markers$cluster))) {
+for (i in 1:length(unique(rna_markers$cluster))) {
   j = i - 1
   cat("###### ", "cluster", i, "\n\n")
   tmp <- topn_gene[topn_gene$cluster == j, ]
@@ -206,6 +206,7 @@ for (i in 1:length(unique(obj_markers$cluster))) {
 
 ### Save the object
 ```{r, echo = FALSE, message = FALSE}
-   save(obj, file = paste(out_path, params$obj_out, sep = "/"))
+   obj_to_save <- list(seurat = obj, seurat_rna_mk = rna_markers, seurat_adt_mk = adt_markers)
+   save(obj_to_save, file = paste(out_path, params$obj_out, sep = "/"))
 ```
 
